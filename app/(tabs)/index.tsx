@@ -25,15 +25,65 @@ export default function CustomersScreen() {
   const filtered = useMemo(() => {
     if (!search.trim()) return customers;
     const q = search.toLowerCase();
-    return customers.filter(
-      (c) =>
+    return customers.filter((c) => {
+      // Search name, phone, company, email
+      if (
         c.firstName.toLowerCase().includes(q) ||
         c.lastName.toLowerCase().includes(q) ||
+        `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
         c.phone.includes(q) ||
         c.company.toLowerCase().includes(q) ||
         c.email.toLowerCase().includes(q)
-    );
+      ) {
+        return true;
+      }
+      // Search vehicle fields: year, make, model, color, VIN, license plate
+      if (c.vehicles && c.vehicles.length > 0) {
+        return c.vehicles.some(
+          (v) =>
+            v.year.toLowerCase().includes(q) ||
+            v.make.toLowerCase().includes(q) ||
+            v.model.toLowerCase().includes(q) ||
+            v.color.toLowerCase().includes(q) ||
+            v.vin.toLowerCase().includes(q) ||
+            v.licensePlate.toLowerCase().includes(q) ||
+            `${v.year} ${v.make} ${v.model}`.toLowerCase().includes(q) ||
+            `${v.make} ${v.model}`.toLowerCase().includes(q)
+        );
+      }
+      return false;
+    });
   }, [customers, search]);
+
+  // Helper to find matching vehicle for search highlight
+  const getMatchingVehicle = useCallback(
+    (customer: Customer): string | null => {
+      if (!search.trim() || !customer.vehicles?.length) return null;
+      const q = search.toLowerCase();
+      const match = customer.vehicles.find(
+        (v) =>
+          v.year.toLowerCase().includes(q) ||
+          v.make.toLowerCase().includes(q) ||
+          v.model.toLowerCase().includes(q) ||
+          v.color.toLowerCase().includes(q) ||
+          v.vin.toLowerCase().includes(q) ||
+          v.licensePlate.toLowerCase().includes(q) ||
+          `${v.year} ${v.make} ${v.model}`.toLowerCase().includes(q) ||
+          `${v.make} ${v.model}`.toLowerCase().includes(q)
+      );
+      if (!match) return null;
+      const parts = [match.year, match.color, match.make, match.model].filter(Boolean);
+      const label = parts.join(" ");
+      if (match.licensePlate && match.licensePlate.toLowerCase().includes(q)) {
+        return `${label} (${match.licensePlate})`;
+      }
+      if (match.vin && match.vin.toLowerCase().includes(q)) {
+        return `${label} (VIN: ...${match.vin.slice(-6)})`;
+      }
+      return label;
+    },
+    [search]
+  );
 
   const sorted = useMemo(
     () => [...filtered].sort((a, b) => a.firstName.localeCompare(b.firstName)),
@@ -67,11 +117,27 @@ export default function CustomersScreen() {
             {item.company ? (
               <Text style={[styles.detail, { color: colors.muted }]}>{item.company}</Text>
             ) : null}
-            {item.vehicles && item.vehicles.length > 0 ? (
-              <Text style={[styles.detail, { color: colors.muted }]}>
-                {item.vehicles.length} vehicle{item.vehicles.length !== 1 ? 's' : ''}
-              </Text>
-            ) : null}
+            {(() => {
+              const matchedVehicle = getMatchingVehicle(item);
+              if (matchedVehicle) {
+                return (
+                  <View style={styles.vehicleMatchRow}>
+                    <IconSymbol name="car.fill" size={13} color={colors.primary} />
+                    <Text style={[styles.vehicleMatchText, { color: colors.primary }]}>
+                      {matchedVehicle}
+                    </Text>
+                  </View>
+                );
+              }
+              if (item.vehicles && item.vehicles.length > 0) {
+                return (
+                  <Text style={[styles.detail, { color: colors.muted }]}>
+                    {item.vehicles.length} vehicle{item.vehicles.length !== 1 ? 's' : ''}
+                  </Text>
+                );
+              }
+              return null;
+            })()}
           </View>
           <IconSymbol name="chevron.right" size={18} color={colors.muted} />
         </Pressable>
@@ -103,7 +169,7 @@ export default function CustomersScreen() {
         <IconSymbol name="magnifyingglass" size={18} color={colors.muted} />
         <TextInput
           style={[styles.searchInput, { color: colors.foreground }]}
-          placeholder="Search customers..."
+          placeholder="Search by name, phone, or vehicle..."
           placeholderTextColor={colors.muted}
           value={search}
           onChangeText={setSearch}
@@ -260,6 +326,16 @@ const styles = StyleSheet.create({
   },
   detail: {
     fontSize: 14,
+  },
+  vehicleMatchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 1,
+  },
+  vehicleMatchText: {
+    fontSize: 13,
+    fontWeight: "500",
   },
   emptyContainer: {
     flex: 1,

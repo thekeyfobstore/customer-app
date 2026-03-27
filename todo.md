@@ -59,3 +59,4 @@
 - [ ] Test Clover API credentials directly from server
 - [x] Add search bar to Customers tab to find customers by name or phone number
 - [x] Fix OpenPhone import — contacts importing as blank entries, only showing 10 when there are thousands
+- [x] Add vehicle search to Customers tab (search by year, make, model, color, VIN, license plate)
