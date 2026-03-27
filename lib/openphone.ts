@@ -6,31 +6,61 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 }
 
+/**
+ * Fetch ALL contacts from OpenPhone with pagination.
+ * The API returns contacts inside `defaultFields` with `nextPageToken` for pagination.
+ */
 export async function fetchOpenPhoneContacts(apiKey: string): Promise<OpenPhoneContact[]> {
-  const response = await fetch(`${BASE_URL}/contacts`, {
-    headers: {
-      Authorization: apiKey,
-      "Content-Type": "application/json",
-    },
-  });
+  const allContacts: OpenPhoneContact[] = [];
+  let nextPageToken: string | undefined;
+  let pageCount = 0;
+  const MAX_PAGES = 200; // Safety limit to avoid infinite loops
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenPhone API error (${response.status}): ${errorText}`);
-  }
+  do {
+    let url = `${BASE_URL}/contacts?pageSize=100`;
+    if (nextPageToken) {
+      url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
+    }
 
-  const data = await response.json();
-  const contacts: OpenPhoneContact[] = (data.data || []).map((c: any) => ({
-    id: c.id,
-    firstName: c.firstName || "",
-    lastName: c.lastName || "",
-    phoneNumbers: c.phoneNumbers || [],
-    emails: c.emails || [],
-    company: c.company || "",
-    selected: true,
-  }));
+    const response = await fetch(url, {
+      headers: {
+        Authorization: apiKey,
+        "Content-Type": "application/json",
+      },
+    });
 
-  return contacts;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenPhone API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    const rawContacts = data.data || [];
+
+    // Map contacts - OpenPhone nests fields inside `defaultFields`
+    const contacts: OpenPhoneContact[] = rawContacts.map((c: any) => {
+      const df = c.defaultFields || {};
+      return {
+        id: c.id || generateId(),
+        firstName: df.firstName || c.firstName || "",
+        lastName: df.lastName || c.lastName || "",
+        phoneNumbers: (df.phoneNumbers || c.phoneNumbers || []).map((p: any) => ({
+          number: p.value || p.number || "",
+        })),
+        emails: (df.emails || c.emails || []).map((e: any) => ({
+          address: e.value || e.address || "",
+        })),
+        company: df.company || c.company || "",
+        selected: true,
+      };
+    });
+
+    allContacts.push(...contacts);
+    nextPageToken = data.nextPageToken;
+    pageCount++;
+  } while (nextPageToken && pageCount < MAX_PAGES);
+
+  return allContacts;
 }
 
 export async function fetchOpenPhoneMessages(
@@ -105,6 +135,7 @@ export async function sendOpenPhoneMessage(
 
 /**
  * Create a contact in OpenPhone
+ * Uses the `defaultFields` structure for the API
  */
 export async function createOpenPhoneContact(
   apiKey: string,
@@ -118,17 +149,19 @@ export async function createOpenPhoneContact(
 ): Promise<string | null> {
   try {
     const body: any = {
-      firstName: customer.firstName,
-      lastName: customer.lastName,
+      defaultFields: {
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+      },
     };
     if (customer.phone) {
-      body.phoneNumbers = [{ number: customer.phone }];
+      body.defaultFields.phoneNumbers = [{ value: customer.phone }];
     }
     if (customer.email) {
-      body.emails = [{ address: customer.email }];
+      body.defaultFields.emails = [{ value: customer.email }];
     }
     if (customer.company) {
-      body.company = customer.company;
+      body.defaultFields.company = customer.company;
     }
 
     const response = await fetch(`${BASE_URL}/contacts`, {

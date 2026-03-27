@@ -57,4 +57,5 @@
 - [ ] Fix "Could not load bundle" error in Expo Go
 - [ ] Fix Clover validation still showing old error message (Settings screen not using updated code)
 - [ ] Test Clover API credentials directly from server
-- [ ] Add search bar to Customers tab to find customers by name or phone number
+- [x] Add search bar to Customers tab to find customers by name or phone number
+- [x] Fix OpenPhone import — contacts importing as blank entries, only showing 10 when there are thousands
