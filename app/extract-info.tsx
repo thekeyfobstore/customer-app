@@ -87,6 +87,9 @@ export default function ExtractInfoScreen() {
             make: v.make || "",
             model: v.model || "",
             vin: v.vin || "",
+            keyCode: v.keyCode || "",
+            dealerComparison: v.dealerComparison || "",
+            partNumber: v.partNumber || "",
           }))
         );
       }
@@ -287,14 +290,23 @@ export default function ExtractInfoScreen() {
                   <View style={[styles.vehicleIcon, { backgroundColor: colors.primary + "15" }]}>
                     <IconSymbol name="car.fill" size={22} color={colors.primary} />
                   </View>
-                  <View style={styles.vehicleInfo}>
-                    <Text style={[styles.vehicleTitle, { color: colors.foreground }]}>
-                      {[v.year, v.make, v.model].filter(Boolean).join(" ") || "Unknown Vehicle"}
-                    </Text>
-                    {v.vin ? (
-                      <Text style={[styles.vehicleDetail, { color: colors.muted }]}>VIN: {v.vin}</Text>
-                    ) : null}
-                  </View>
+                   <View style={styles.vehicleInfo}>
+                     <Text style={[styles.vehicleTitle, { color: colors.foreground }]}>
+                       {[v.year, v.make, v.model].filter(Boolean).join(" ") || "Unknown Vehicle"}
+                     </Text>
+                     {v.vin ? (
+                       <Text style={[styles.vehicleDetail, { color: colors.muted }]}>VIN: {v.vin}</Text>
+                     ) : null}
+                     {v.keyCode ? (
+                       <Text style={[styles.vehicleDetail, { color: colors.muted }]}>Key Code: {v.keyCode}</Text>
+                     ) : null}
+                     {v.dealerComparison ? (
+                       <Text style={[styles.vehicleDetail, { color: colors.muted }]}>Dealer/Part: {v.dealerComparison}</Text>
+                     ) : null}
+                     {v.partNumber ? (
+                       <Text style={[styles.vehicleDetail, { color: colors.muted }]}>Part #: {v.partNumber}</Text>
+                     ) : null}
+                   </View>
                   <Pressable
                     onPress={() => setVehicles(vehicles.filter((_, idx) => idx !== i))}
                     style={({ pressed }) => [pressed && { opacity: 0.6 }]}

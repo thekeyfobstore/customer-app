@@ -4,6 +4,9 @@ export interface Vehicle {
   make: string;
   model: string;
   vin: string;
+  keyCode?: string;
+  dealerComparison?: string;
+  partNumber?: string;
 }
 
 export interface Address {
@@ -71,6 +74,15 @@ export interface OpenPhoneContact {
   emails: { address: string }[];
   company: string;
   selected?: boolean;
+  // Custom fields from OpenPhone
+  customFields?: {
+    vehicle?: string;
+    vin?: string;
+    keyCode?: string;
+    dealerComparison?: string;
+    partNumber?: string;
+    address?: string;
+  };
 }
 
 export interface ServiceRecord {

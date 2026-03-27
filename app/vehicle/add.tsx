@@ -26,6 +26,9 @@ export default function AddVehicleScreen() {
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [vin, setVin] = useState("");
+  const [keyCode, setKeyCode] = useState("");
+  const [dealerComparison, setDealerComparison] = useState("");
+  const [partNumber, setPartNumber] = useState("");
 
   const handleSave = () => {
     if (!make.trim() && !model.trim()) {
@@ -45,6 +48,9 @@ export default function AddVehicleScreen() {
       make: make.trim(),
       model: model.trim(),
       vin: vin.trim().toUpperCase(),
+      keyCode: keyCode.trim(),
+      dealerComparison: dealerComparison.trim(),
+      partNumber: partNumber.trim(),
     };
 
     updateCustomer({
@@ -94,7 +100,7 @@ export default function AddVehicleScreen() {
             returnKeyType="next"
           />
           <TextInput
-            style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
+            style={[styles.input, { color: colors.foreground }]}
             placeholder="Model (e.g., Camry)"
             placeholderTextColor={colors.muted}
             value={model}
@@ -106,12 +112,37 @@ export default function AddVehicleScreen() {
         <Text style={[styles.label, { color: colors.muted }]}>IDENTIFICATION</Text>
         <View style={[styles.fieldGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <TextInput
-            style={[styles.input, { color: colors.foreground }]}
+            style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
             placeholder="VIN (optional)"
             placeholderTextColor={colors.muted}
             value={vin}
             onChangeText={setVin}
             autoCapitalize="characters"
+            returnKeyType="next"
+          />
+          <TextInput
+            style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
+            placeholder="Key Code"
+            placeholderTextColor={colors.muted}
+            value={keyCode}
+            onChangeText={setKeyCode}
+            autoCapitalize="characters"
+            returnKeyType="next"
+          />
+          <TextInput
+            style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
+            placeholder="Dealer Comparison & Part #"
+            placeholderTextColor={colors.muted}
+            value={dealerComparison}
+            onChangeText={setDealerComparison}
+            returnKeyType="next"
+          />
+          <TextInput
+            style={[styles.input, { color: colors.foreground }]}
+            placeholder="Part Number"
+            placeholderTextColor={colors.muted}
+            value={partNumber}
+            onChangeText={setPartNumber}
             returnKeyType="done"
             onSubmitEditing={handleSave}
           />

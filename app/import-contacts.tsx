@@ -171,6 +171,11 @@ export default function ImportContactsScreen() {
           {item.company ? (
             <Text style={[styles.contactDetail, { color: colors.muted }]}>{item.company}</Text>
           ) : null}
+          {item.customFields?.vehicle ? (
+            <Text style={[styles.contactDetail, { color: colors.primary }]}>
+              {item.customFields.vehicle}
+            </Text>
+          ) : null}
         </View>
       </Pressable>
     ),

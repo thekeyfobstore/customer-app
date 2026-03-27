@@ -37,7 +37,7 @@ export default function CustomersScreen() {
       ) {
         return true;
       }
-      // Search vehicle fields: year, make, model, color, VIN, license plate
+      // Search vehicle fields
       if (c.vehicles && c.vehicles.length > 0) {
         return c.vehicles.some(
           (v) =>
@@ -45,6 +45,9 @@ export default function CustomersScreen() {
             v.make.toLowerCase().includes(q) ||
             v.model.toLowerCase().includes(q) ||
             v.vin.toLowerCase().includes(q) ||
+            (v.keyCode || "").toLowerCase().includes(q) ||
+            (v.dealerComparison || "").toLowerCase().includes(q) ||
+            (v.partNumber || "").toLowerCase().includes(q) ||
             `${v.year} ${v.make} ${v.model}`.toLowerCase().includes(q) ||
             `${v.make} ${v.model}`.toLowerCase().includes(q)
         );
@@ -64,6 +67,9 @@ export default function CustomersScreen() {
           v.make.toLowerCase().includes(q) ||
           v.model.toLowerCase().includes(q) ||
           v.vin.toLowerCase().includes(q) ||
+          (v.keyCode || "").toLowerCase().includes(q) ||
+          (v.dealerComparison || "").toLowerCase().includes(q) ||
+          (v.partNumber || "").toLowerCase().includes(q) ||
           `${v.year} ${v.make} ${v.model}`.toLowerCase().includes(q) ||
           `${v.make} ${v.model}`.toLowerCase().includes(q)
       );
@@ -72,6 +78,12 @@ export default function CustomersScreen() {
       const label = parts.join(" ");
       if (match.vin && match.vin.toLowerCase().includes(q)) {
         return `${label} (VIN: ...${match.vin.slice(-6)})`;
+      }
+      if (match.keyCode && match.keyCode.toLowerCase().includes(q)) {
+        return `${label} (Key: ${match.keyCode})`;
+      }
+      if (match.partNumber && match.partNumber.toLowerCase().includes(q)) {
+        return `${label} (Part: ${match.partNumber})`;
       }
       return label;
     },

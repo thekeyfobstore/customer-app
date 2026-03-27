@@ -306,6 +306,15 @@ export default function CustomerDetailScreen() {
                     {v.vin ? (
                       <Text style={[styles.vehicleDetail, { color: colors.muted }]}>VIN: {v.vin}</Text>
                     ) : null}
+                    {v.keyCode ? (
+                      <Text style={[styles.vehicleDetail, { color: colors.muted }]}>Key Code: {v.keyCode}</Text>
+                    ) : null}
+                    {v.dealerComparison ? (
+                      <Text style={[styles.vehicleDetail, { color: colors.muted }]}>Dealer/Part: {v.dealerComparison}</Text>
+                    ) : null}
+                    {v.partNumber ? (
+                      <Text style={[styles.vehicleDetail, { color: colors.muted }]}>Part #: {v.partNumber}</Text>
+                    ) : null}
                   </View>
                   <View style={styles.vehicleActions}>
                     <Pressable

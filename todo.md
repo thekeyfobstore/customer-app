@@ -61,3 +61,9 @@
 - [x] Fix OpenPhone import — contacts importing as blank entries, only showing 10 when there are thousands
 - [x] Add vehicle search to Customers tab (search by year, make, model, color, VIN, license plate)
 - [x] Remove license plate and color from vehicle fields — keep only Year, Make, Model, VIN
+- [x] Add keyCode, dealerComparison, and partNumber fields to Vehicle type
+- [x] Update OpenPhone import to map custom fields (Year Make Model, VIN, Key Code, Dealer Comparison, Address)
+- [x] Parse customer name from Company field when firstName/lastName empty
+- [x] Update vehicle add/edit forms with Key Code, Dealer Comparison, and Part Number fields
+- [x] Update customer detail to show Key Code, Dealer Comparison, and Part Number
+- [x] Update search to include new fields (keyCode, dealerComparison, partNumber)
