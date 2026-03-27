@@ -21,7 +21,7 @@ import { Linking, ScrollView } from "react-native";
 export default function CustomersScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { customers, loading } = useData();
+  const { customers, messages, loading } = useData();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CustomerStatus | "all">("all");
   const [areaFilter, setAreaFilter] = useState<string>("all");
@@ -167,9 +167,30 @@ export default function CustomersScreen() {
     [search]
   );
 
+  // Build a map of customerId -> most recent message timestamp
+  const lastMessageMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const msg of messages) {
+      const existing = map.get(msg.customerId);
+      if (!existing || msg.createdAt > existing) {
+        map.set(msg.customerId, msg.createdAt);
+      }
+    }
+    return map;
+  }, [messages]);
+
   const sorted = useMemo(
-    () => [...filtered].sort((a, b) => a.firstName.localeCompare(b.firstName)),
-    [filtered]
+    () => [...filtered].sort((a, b) => {
+      // Sort by most recent message first (like phone system)
+      const aTime = lastMessageMap.get(a.id) || a.updatedAt || a.createdAt;
+      const bTime = lastMessageMap.get(b.id) || b.updatedAt || b.createdAt;
+      // Most recent first
+      const timeDiff = bTime.localeCompare(aTime);
+      if (timeDiff !== 0) return timeDiff;
+      // Fallback: alphabetical by first name
+      return a.firstName.localeCompare(b.firstName);
+    }),
+    [filtered, lastMessageMap]
   );
 
   const renderCustomer = useCallback(
