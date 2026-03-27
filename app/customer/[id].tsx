@@ -30,10 +30,12 @@ import {
   fetchOpenPhoneNumbers,
   fetchConversationMessages,
 } from "@/lib/openphone";
-import type { Vehicle, Message, CustomerStatus } from "@/lib/types";
+import type { Vehicle, Message, CustomerStatus, CustomerPhoto } from "@/lib/types";
 import { CUSTOMER_STATUS_LABELS, CUSTOMER_STATUS_COLORS } from "@/lib/types";
 import { Linking } from "react-native";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 
 type Tab = "info" | "messages" | "appointments";
 
@@ -61,6 +63,7 @@ export default function CustomerDetailScreen() {
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [refreshingMessages, setRefreshingMessages] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<CustomerPhoto | null>(null);
 
   useEffect(() => {
     loadApiKey().then((key) => {
@@ -483,8 +486,140 @@ export default function CustomerDetailScreen() {
             </View>
           ) : null}
 
+          {/* Photos */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+              Photos ({(customer.photos || []).length})
+            </Text>
+            <Pressable
+              onPress={async () => {
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ["images"],
+                  allowsMultipleSelection: true,
+                  quality: 0.7,
+                });
+                if (!result.canceled && result.assets.length > 0) {
+                  const newPhotos: CustomerPhoto[] = result.assets.map((asset) => ({
+                    id: generateId(),
+                    uri: asset.uri,
+                    caption: "",
+                    createdAt: new Date().toISOString(),
+                  }));
+                  updateCustomer({
+                    ...customer,
+                    photos: [...(customer.photos || []), ...newPhotos],
+                    updatedAt: new Date().toISOString(),
+                  });
+                  if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }
+              }}
+              style={({ pressed }) => [pressed && { opacity: 0.6 }]}
+            >
+              <IconSymbol name="camera.fill" size={22} color={colors.primary} />
+            </Pressable>
+          </View>
+          {(!customer.photos || customer.photos.length === 0) ? (
+            <Pressable
+              onPress={async () => {
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ["images"],
+                  allowsMultipleSelection: true,
+                  quality: 0.7,
+                });
+                if (!result.canceled && result.assets.length > 0) {
+                  const newPhotos: CustomerPhoto[] = result.assets.map((asset) => ({
+                    id: generateId(),
+                    uri: asset.uri,
+                    caption: "",
+                    createdAt: new Date().toISOString(),
+                  }));
+                  updateCustomer({
+                    ...customer,
+                    photos: [...(customer.photos || []), ...newPhotos],
+                    updatedAt: new Date().toISOString(),
+                  });
+                  if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }
+              }}
+              style={({ pressed }) => [
+                styles.emptySection,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <IconSymbol name="camera.fill" size={28} color={colors.muted} />
+              <Text style={[styles.emptySectionText, { color: colors.muted, marginTop: 4 }]}>Tap to add photos</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.photoGrid}>
+              {customer.photos.map((photo) => (
+                <Pressable
+                  key={photo.id}
+                  onPress={() => setSelectedPhoto(photo)}
+                  style={({ pressed }) => [
+                    styles.photoThumb,
+                    pressed && { opacity: 0.8 },
+                  ]}
+                >
+                  <Image
+                    source={{ uri: photo.uri }}
+                    style={styles.photoImage}
+                    contentFit="cover"
+                  />
+                </Pressable>
+              ))}
+            </View>
+          )}
+
           <View style={{ height: 40 }} />
         </ScrollView>
+      )}
+
+      {/* Photo Viewer Modal */}
+      {selectedPhoto && (
+        <Pressable
+          onPress={() => setSelectedPhoto(null)}
+          style={styles.photoOverlay}
+        >
+          <View style={styles.photoViewerHeader}>
+            <Pressable
+              onPress={() => setSelectedPhoto(null)}
+              style={({ pressed }) => [styles.photoCloseBtn, pressed && { opacity: 0.6 }]}
+            >
+              <IconSymbol name="xmark" size={22} color="#FFFFFF" />
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                Alert.alert("Delete Photo", "Remove this photo?", [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => {
+                      updateCustomer({
+                        ...customer,
+                        photos: (customer.photos || []).filter((p) => p.id !== selectedPhoto.id),
+                        updatedAt: new Date().toISOString(),
+                      });
+                      setSelectedPhoto(null);
+                    },
+                  },
+                ]);
+              }}
+              style={({ pressed }) => [styles.photoCloseBtn, pressed && { opacity: 0.6 }]}
+            >
+              <IconSymbol name="trash.fill" size={20} color="#FF4444" />
+            </Pressable>
+          </View>
+          <Image
+            source={{ uri: selectedPhoto.uri }}
+            style={styles.photoFull}
+            contentFit="contain"
+          />
+          {selectedPhoto.caption ? (
+            <Text style={styles.photoCaption}>{selectedPhoto.caption}</Text>
+          ) : null}
+        </Pressable>
       )}
 
       {activeTab === "messages" && (
@@ -704,4 +839,12 @@ const styles = StyleSheet.create({
   statusPickerText: { fontSize: 15, flex: 1 },
   openPhoneButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 20, marginBottom: 8, paddingVertical: 12, borderRadius: 14, borderWidth: 1 },
   openPhoneText: { fontSize: 15, fontWeight: "600" },
+  photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+  photoThumb: { width: 100, height: 100, borderRadius: 10, overflow: "hidden" },
+  photoImage: { width: "100%", height: "100%" },
+  photoOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.92)", zIndex: 100, justifyContent: "center", alignItems: "center" },
+  photoViewerHeader: { position: "absolute", top: 60, left: 0, right: 0, flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 20, zIndex: 101 },
+  photoCloseBtn: { padding: 10, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20 },
+  photoFull: { width: "90%", height: "60%" },
+  photoCaption: { color: "#FFFFFF", fontSize: 15, marginTop: 12, textAlign: "center" },
 });

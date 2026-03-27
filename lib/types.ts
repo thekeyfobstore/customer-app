@@ -63,6 +63,14 @@ export interface Customer {
   createdAt: string;
   updatedAt: string;
   openPhoneContactId?: string;
+  photos?: CustomerPhoto[];
+}
+
+export interface CustomerPhoto {
+  id: string;
+  uri: string;
+  caption?: string;
+  createdAt: string;
 }
 
 export interface Message {

@@ -76,8 +76,12 @@
 - [x] Add status filter on customer list
 - [x] Show status badge on customer cards in list view
 - [x] Add "Open in OpenPhone" link on customer detail and customer list cards
-- [ ] Add location/area filter on customer list alongside status filter
+- [x] Add location/area filter on customer list alongside status filter
 - [x] Build server-side OpenPhone polling (every 2-3 min) for automatic contact sync
 - [x] Add contacts table to database schema
 - [x] Create tRPC endpoint for app to fetch synced contacts
 - [x] Update app to auto-refresh from server-synced contacts
+- [x] Add location/area filter chips on customer list (extract areas from customer addresses/company fields)
+- [x] Add photo attachments to customer profiles (camera + gallery, stored with customer)
+- [x] Two-way sync: push customers created in ClientBook back to OpenPhone (fixed API name field)
+- [x] Add duplicate detection by phone number (prevent same customer imported twice)

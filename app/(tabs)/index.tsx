@@ -24,12 +24,72 @@ export default function CustomersScreen() {
   const { customers, loading } = useData();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CustomerStatus | "all">("all");
+  const [areaFilter, setAreaFilter] = useState<string>("all");
+
+  // Extract unique areas from customer company fields and addresses
+  const areas = useMemo(() => {
+    const areaSet = new Set<string>();
+    for (const c of customers) {
+      // Extract area from address
+      if (c.address?.city) areaSet.add(c.address.city.trim());
+      if (c.address?.street) {
+        // Check for known Nova Scotia areas in address
+        const addr = c.address.street.toLowerCase();
+        const knownAreas = ["pictou", "bridgewater", "halifax", "dartmouth", "truro", "sydney",
+          "antigonish", "new glasgow", "amherst", "yarmouth", "kentville", "wolfville",
+          "windsor", "digby", "lunenburg", "mahone bay", "chester", "shelburne",
+          "liverpool", "middleton", "berwick", "port hawkesbury", "glace bay",
+          "eskasoni", "easkasoni", "baddeck", "inverness", "cheticamp", "canso",
+          "guysborough", "springhill", "parrsboro", "tatamagouche", "westville",
+          "stellarton", "moncton", "fredericton", "saint john", "miramichi",
+          "bathurst", "campbellton", "sussex", "sackville", "oromocto",
+          "lower sackville", "bedford", "cole harbour", "eastern passage"];
+        for (const area of knownAreas) {
+          if (addr.includes(area)) {
+            areaSet.add(area.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "));
+          }
+        }
+      }
+      // Extract area from company field (your format: "Name Year Make Model Location")
+      if (c.company) {
+        const companyLower = c.company.toLowerCase();
+        const knownAreas = ["pictou", "bridgewater", "halifax", "dartmouth", "truro", "sydney",
+          "antigonish", "new glasgow", "amherst", "yarmouth", "kentville", "wolfville",
+          "windsor", "digby", "lunenburg", "mahone bay", "chester", "shelburne",
+          "liverpool", "middleton", "berwick", "port hawkesbury", "glace bay",
+          "eskasoni", "easkasoni", "baddeck", "inverness", "cheticamp", "canso",
+          "guysborough", "springhill", "parrsboro", "tatamagouche", "westville",
+          "stellarton", "moncton", "fredericton", "saint john", "miramichi",
+          "bathurst", "campbellton", "sussex", "sackville", "oromocto",
+          "lower sackville", "bedford", "cole harbour", "eastern passage"];
+        for (const area of knownAreas) {
+          if (companyLower.includes(area)) {
+            areaSet.add(area.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "));
+          }
+        }
+      }
+    }
+    return Array.from(areaSet).sort();
+  }, [customers]);
+
+  // Helper to check if a customer belongs to an area
+  const customerInArea = useCallback((c: Customer, area: string): boolean => {
+    const areaLower = area.toLowerCase();
+    if (c.address?.city?.toLowerCase().includes(areaLower)) return true;
+    if (c.address?.street?.toLowerCase().includes(areaLower)) return true;
+    if (c.company?.toLowerCase().includes(areaLower)) return true;
+    return false;
+  }, []);
 
   const filtered = useMemo(() => {
     let result = customers;
     // Status filter
     if (statusFilter !== "all") {
       result = result.filter((c) => (c.status || "none") === statusFilter);
+    }
+    // Area filter
+    if (areaFilter !== "all") {
+      result = result.filter((c) => customerInArea(c, areaFilter));
     }
     if (!search.trim()) return result;
     const q = search.toLowerCase();
@@ -62,7 +122,7 @@ export default function CustomersScreen() {
       }
       return false;
     });
-  }, [customers, search, statusFilter]);
+  }, [customers, search, statusFilter, areaFilter, customerInArea]);
 
   // Helper to find matching vehicle for search highlight
   const getMatchingVehicle = useCallback(
@@ -272,6 +332,55 @@ export default function CustomersScreen() {
           );
         })}
       </ScrollView>
+
+      {/* Area Filter Chips */}
+      {areas.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterChips}
+        >
+          <Pressable
+            onPress={() => setAreaFilter("all")}
+            style={({ pressed }) => [
+              styles.chip,
+              areaFilter === "all"
+                ? { backgroundColor: colors.primary + "20", borderColor: colors.primary, borderWidth: 1.5 }
+                : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Text style={[
+              styles.chipText,
+              { color: areaFilter === "all" ? colors.primary : colors.muted },
+              areaFilter === "all" && { fontWeight: "700" },
+            ]}>All Areas</Text>
+          </Pressable>
+          {areas.map((area) => {
+            const count = customers.filter((c) => customerInArea(c, area)).length;
+            const isActive = areaFilter === area;
+            return (
+              <Pressable
+                key={area}
+                onPress={() => setAreaFilter(isActive ? "all" : area)}
+                style={({ pressed }) => [
+                  styles.chip,
+                  isActive
+                    ? { backgroundColor: colors.primary + "20", borderColor: colors.primary, borderWidth: 1.5 }
+                    : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text style={[
+                  styles.chipText,
+                  { color: isActive ? colors.primary : colors.muted },
+                  isActive && { fontWeight: "700" },
+                ]}>{area} ({count})</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
 
       {sorted.length === 0 ? (
         <View style={styles.emptyContainer}>

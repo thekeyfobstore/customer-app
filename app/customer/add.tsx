@@ -71,12 +71,15 @@ export default function AddCustomerScreen() {
       try {
         const apiKey = await loadApiKey();
         if (apiKey) {
+          // Build company field in the user's preferred format:
+          // "FirstName LastName Year Make Model Location"
+          const companyForOP = customer.company || [customer.firstName, customer.lastName].filter(Boolean).join(" ");
           const opId = await createOpenPhoneContact(apiKey, {
             firstName: customer.firstName,
             lastName: customer.lastName,
             phone: customer.phone,
             email: customer.email,
-            company: customer.company,
+            company: companyForOP,
           });
           if (opId) customer.openPhoneContactId = opId;
         }

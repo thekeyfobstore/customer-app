@@ -361,10 +361,10 @@ export async function createOpenPhoneContact(
       },
     };
     if (customer.phone) {
-      body.defaultFields.phoneNumbers = [{ value: customer.phone }];
+      body.defaultFields.phoneNumbers = [{ name: "Mobile", value: customer.phone }];
     }
     if (customer.email) {
-      body.defaultFields.emails = [{ value: customer.email }];
+      body.defaultFields.emails = [{ name: "Email", value: customer.email }];
     }
     if (customer.company) {
       body.defaultFields.company = customer.company;

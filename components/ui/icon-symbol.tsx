@@ -51,6 +51,9 @@ const MAPPING = {
   "repeat": "repeat",
   "person.badge.plus": "person-add",
   "star.fill": "star",
+  "camera.fill": "camera-alt",
+  "photo.fill": "photo",
+  "photo.on.rectangle": "collections",
 } as IconMapping;
 
 export function IconSymbol({

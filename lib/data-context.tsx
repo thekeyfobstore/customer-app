@@ -77,8 +77,27 @@ function dataReducer(state: DataState, action: DataAction): DataState {
       return { ...state, dropInLocations: action.payload };
     case "SET_DAY_ROUTES":
       return { ...state, dayRoutes: action.payload };
-    case "ADD_CUSTOMER":
+    case "ADD_CUSTOMER": {
+      // Prevent duplicates by phone number
+      const newPhone = action.payload.phone?.replace(/\D/g, "") || "";
+      if (newPhone.length >= 7) {
+        const duplicate = state.customers.find(
+          (c) => c.phone?.replace(/\D/g, "") === newPhone
+        );
+        if (duplicate) {
+          // Update existing instead of adding duplicate
+          return {
+            ...state,
+            customers: state.customers.map((c) =>
+              c.id === duplicate.id
+                ? { ...c, ...action.payload, id: duplicate.id, status: c.status || action.payload.status }
+                : c
+            ),
+          };
+        }
+      }
       return { ...state, customers: [...state.customers, action.payload] };
+    }
     case "UPDATE_CUSTOMER":
       return { ...state, customers: state.customers.map((c) => c.id === action.payload.id ? action.payload : c) };
     case "DELETE_CUSTOMER":
@@ -100,8 +119,21 @@ function dataReducer(state: DataState, action: DataAction): DataState {
     case "ADD_MESSAGES":
       return { ...state, messages: [...state.messages, ...action.payload] };
     case "IMPORT_CUSTOMERS": {
-      const existingPhones = new Set(state.customers.map((c) => c.phone));
-      const newCustomers = action.payload.filter((c) => !existingPhones.has(c.phone));
+      // Normalize phone numbers to digits only for dedup
+      const existingPhones = new Set(
+        state.customers.map((c) => c.phone?.replace(/\D/g, "")).filter(Boolean)
+      );
+      const existingOpenPhoneIds = new Set(
+        state.customers.map((c) => c.openPhoneContactId).filter(Boolean)
+      );
+      const newCustomers = action.payload.filter((c) => {
+        // Skip if already exists by OpenPhone ID
+        if (c.openPhoneContactId && existingOpenPhoneIds.has(c.openPhoneContactId)) return false;
+        // Skip if already exists by phone number
+        const digits = c.phone?.replace(/\D/g, "") || "";
+        if (digits.length >= 7 && existingPhones.has(digits)) return false;
+        return true;
+      });
       return { ...state, customers: [...state.customers, ...newCustomers] };
     }
     case "SYNC_CONTACTS": {
