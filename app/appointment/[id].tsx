@@ -238,6 +238,21 @@ export default function AppointmentDetailScreen() {
               </Pressable>
             </>
           )}
+          {appointment.status === "completed" && (
+            <Pressable
+              onPress={() => router.push(`/charge?customerId=${appointment.customerId}&appointmentId=${appointment.id}` as any)}
+              style={({ pressed }) => [
+                styles.actionButton,
+                { backgroundColor: colors.success + "15", borderColor: colors.success },
+                pressed && { opacity: 0.8, transform: [{ scale: 0.97 }] },
+              ]}
+            >
+              <IconSymbol name="paperplane.fill" size={20} color={colors.success} />
+              <Text style={[styles.actionText, { color: colors.success }]}>
+                Charge Customer
+              </Text>
+            </Pressable>
+          )}
           {appointment.status !== "scheduled" && (
             <Pressable
               onPress={() => handleStatusChange("scheduled")}

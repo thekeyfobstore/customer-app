@@ -66,6 +66,48 @@ export interface OpenPhoneContact {
   selected?: boolean;
 }
 
+export interface ServiceRecord {
+  id: string;
+  vehicleId: string;
+  customerId: string;
+  appointmentId?: string;
+  service: string;
+  description: string;
+  cost: number; // in cents
+  date: string;
+  createdAt: string;
+}
+
+export interface CloverOrder {
+  id: string;
+  customerId: string;
+  appointmentId?: string;
+  cloverOrderId?: string;
+  title: string;
+  lineItems: CloverLineItem[];
+  totalAmount: number; // in cents
+  status: "pending" | "sent" | "paid" | "failed";
+  cloverPaymentId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CloverLineItem {
+  name: string;
+  price: number; // in cents
+  quantity: number;
+}
+
+export interface CloverPayment {
+  id: string;
+  orderId: string;
+  amount: number; // in cents
+  tipAmount: number;
+  taxAmount: number;
+  result: string;
+  createdTime: number;
+}
+
 /** Data extracted from message history by AI */
 export interface ExtractedInfo {
   firstName?: string;

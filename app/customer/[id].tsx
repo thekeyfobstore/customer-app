@@ -292,30 +292,39 @@ export default function CustomerDetailScreen() {
             </View>
           ) : (
             customer.vehicles.map((v) => (
-              <View
-                key={v.id}
-                style={[styles.vehicleCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              >
-                <View style={[styles.vehicleIcon, { backgroundColor: colors.primary + "15" }]}>
-                  <IconSymbol name="car.fill" size={22} color={colors.primary} />
-                </View>
-                <View style={styles.vehicleInfo}>
-                  <Text style={[styles.vehicleTitle, { color: colors.foreground }]}>
-                    {v.year} {v.make} {v.model}
-                  </Text>
-                  <Text style={[styles.vehicleDetail, { color: colors.muted }]}>
-                    {[v.color, v.licensePlate].filter(Boolean).join(" · ") || "No details"}
-                  </Text>
-                  {v.vin ? (
-                    <Text style={[styles.vehicleVin, { color: colors.muted }]}>VIN: {v.vin}</Text>
-                  ) : null}
-                </View>
-                <Pressable
-                  onPress={() => handleDeleteVehicle(v.id)}
-                  style={({ pressed }) => [pressed && { opacity: 0.6 }]}
+              <View key={v.id}>
+                <View
+                  style={[styles.vehicleCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
-                  <IconSymbol name="xmark" size={16} color={colors.muted} />
-                </Pressable>
+                  <View style={[styles.vehicleIcon, { backgroundColor: colors.primary + "15" }]}>
+                    <IconSymbol name="car.fill" size={22} color={colors.primary} />
+                  </View>
+                  <View style={styles.vehicleInfo}>
+                    <Text style={[styles.vehicleTitle, { color: colors.foreground }]}>
+                      {v.year} {v.make} {v.model}
+                    </Text>
+                    <Text style={[styles.vehicleDetail, { color: colors.muted }]}>
+                      {[v.color, v.licensePlate].filter(Boolean).join(" · ") || "No details"}
+                    </Text>
+                    {v.vin ? (
+                      <Text style={[styles.vehicleVin, { color: colors.muted }]}>VIN: {v.vin}</Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.vehicleActions}>
+                    <Pressable
+                      onPress={() => router.push(`/service-history?vehicleId=${v.id}&customerId=${customer.id}` as any)}
+                      style={({ pressed }) => [pressed && { opacity: 0.6 }]}
+                    >
+                      <IconSymbol name="clock.fill" size={18} color={colors.primary} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleDeleteVehicle(v.id)}
+                      style={({ pressed }) => [pressed && { opacity: 0.6 }]}
+                    >
+                      <IconSymbol name="xmark" size={16} color={colors.muted} />
+                    </Pressable>
+                  </View>
+                </View>
               </View>
             ))
           )}
@@ -526,6 +535,7 @@ const styles = StyleSheet.create({
   vehicleTitle: { fontSize: 16, fontWeight: "600" },
   vehicleDetail: { fontSize: 13 },
   vehicleVin: { fontSize: 11, fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" },
+  vehicleActions: { flexDirection: "row" as const, gap: 12, alignItems: "center" as const },
   appointmentCard: { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 8, gap: 12 },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   appointmentContent: { flex: 1, gap: 2 },

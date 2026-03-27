@@ -28,3 +28,12 @@
 - [x] Build extraction review/confirm UI screen
 - [x] Add Address field to customer profile (street, city, state, zip)
 - [x] Auto-fill customer profile from extracted message data
+- [x] Build Clover API service (create orders, fetch payments)
+- [x] Build server-side Clover proxy endpoints
+- [x] Add Clover API key/Merchant ID settings in Settings screen
+- [x] Build "Charge Customer" flow from completed appointments
+- [x] Build payment history UI on customer profile
+- [x] Build calendar view for appointments tab
+- [x] Add push notification appointment reminders
+- [x] Add service history per vehicle (track services done on each vehicle)
+- [x] Update appointment detail with "Send to Clover" button

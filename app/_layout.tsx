@@ -99,6 +99,8 @@ export default function RootLayout() {
               <Stack.Screen name="import-contacts" options={{ presentation: "modal" }} />
               <Stack.Screen name="vehicle/add" options={{ presentation: "modal" }} />
               <Stack.Screen name="extract-info" options={{ presentation: "modal" }} />
+              <Stack.Screen name="charge/index" options={{ presentation: "modal" }} />
+              <Stack.Screen name="service-history/index" options={{ presentation: "card" }} />
             </Stack>
           </DataProvider>
           <StatusBar style="auto" />
