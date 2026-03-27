@@ -91,3 +91,4 @@
 - [x] Build quick-quote feature with multi-option (OEM/aftermarket) support
 - [x] Send quote via OpenPhone text message
 - [x] Auto-set customer status to "Quote Sent" after sending quote
+- [x] Update app icon with user's Key Fob Store logo
