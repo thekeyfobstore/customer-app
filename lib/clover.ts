@@ -1,4 +1,5 @@
 import type { CloverPayment } from "./types";
+import { getApiBaseUrl } from "@/constants/oauth";
 
 const CLOVER_BASE_URL = "https://api.clover.com";
 
@@ -15,8 +16,69 @@ function getHeaders(apiToken: string) {
   };
 }
 
-/** Create an order in Clover with line items */
+/** Helper to call the server-side Clover proxy (avoids CORS) */
+async function callServerProxy(
+  procedure: string,
+  input: Record<string, any>,
+  method: "query" | "mutation" = "mutation"
+): Promise<any> {
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}/api/trpc/clover.${procedure}`;
+
+  if (method === "query") {
+    const encoded = encodeURIComponent(JSON.stringify({ json: input }));
+    const res = await fetch(`${url}?input=${encoded}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Server proxy error: ${err}`);
+    }
+    const data = await res.json();
+    return data?.result?.data?.json ?? data?.result?.data ?? data;
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ json: input }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Server proxy error: ${err}`);
+  }
+  const data = await res.json();
+  return data?.result?.data?.json ?? data?.result?.data ?? data;
+}
+
+/** Create an order in Clover with line items (via server proxy) */
 export async function createCloverOrder(
+  config: CloverConfig,
+  title: string,
+  lineItems: { name: string; price: number; quantity: number }[],
+  note?: string
+): Promise<{ orderId: string }> {
+  try {
+    // Try server proxy first (avoids CORS)
+    return await callServerProxy("createOrder", {
+      apiToken: config.apiToken,
+      merchantId: config.merchantId,
+      title,
+      lineItems,
+      note: note || "",
+    });
+  } catch {
+    // Fallback to direct API call (works on native)
+    return createCloverOrderDirect(config, title, lineItems, note);
+  }
+}
+
+/** Direct Clover API call (for native apps where CORS isn't an issue) */
+async function createCloverOrderDirect(
   config: CloverConfig,
   title: string,
   lineItems: { name: string; price: number; quantity: number }[],
@@ -24,7 +86,6 @@ export async function createCloverOrder(
 ): Promise<{ orderId: string }> {
   const { apiToken, merchantId } = config;
 
-  // Step 1: Create the order
   const orderRes = await fetch(
     `${CLOVER_BASE_URL}/v3/merchants/${merchantId}/orders`,
     {
@@ -47,7 +108,6 @@ export async function createCloverOrder(
   const order = await orderRes.json();
   const orderId = order.id;
 
-  // Step 2: Add line items to the order
   for (const item of lineItems) {
     for (let i = 0; i < item.quantity; i++) {
       const lineRes = await fetch(
@@ -74,6 +134,23 @@ export async function createCloverOrder(
 
 /** Get recent payments for the merchant */
 export async function getCloverPayments(
+  config: CloverConfig,
+  limit: number = 50
+): Promise<CloverPayment[]> {
+  try {
+    // Try server proxy first
+    return await callServerProxy(
+      "getPayments",
+      { apiToken: config.apiToken, merchantId: config.merchantId, limit },
+      "query"
+    );
+  } catch {
+    // Fallback to direct
+    return getCloverPaymentsDirect(config, limit);
+  }
+}
+
+async function getCloverPaymentsDirect(
   config: CloverConfig,
   limit: number = 50
 ): Promise<CloverPayment[]> {
@@ -159,26 +236,35 @@ export async function getCloverOrder(
   return res.json();
 }
 
-/** Validate Clover credentials by fetching merchant info */
+/** Validate Clover credentials (via server proxy to avoid CORS) */
 export async function validateCloverCredentials(
   config: CloverConfig
-): Promise<{ valid: boolean; merchantName?: string }> {
-  const { apiToken, merchantId } = config;
-
+): Promise<{ valid: boolean; merchantName?: string; error?: string | null }> {
   try {
-    const res = await fetch(
-      `${CLOVER_BASE_URL}/v3/merchants/${merchantId}`,
-      {
-        method: "GET",
-        headers: getHeaders(apiToken),
-      }
-    );
-
-    if (!res.ok) return { valid: false };
-
-    const data = await res.json();
-    return { valid: true, merchantName: data.name || "" };
+    // Try server proxy first (avoids CORS on web/Expo Go)
+    const result = await callServerProxy("validate", {
+      apiToken: config.apiToken,
+      merchantId: config.merchantId,
+    });
+    return result;
   } catch {
-    return { valid: false };
+    // Fallback: try direct API call (works on native)
+    try {
+      const { apiToken, merchantId } = config;
+      const res = await fetch(
+        `${CLOVER_BASE_URL}/v3/merchants/${merchantId}`,
+        {
+          method: "GET",
+          headers: getHeaders(apiToken),
+        }
+      );
+
+      if (!res.ok) return { valid: false, error: `Clover returned status ${res.status}` };
+
+      const data = await res.json();
+      return { valid: true, merchantName: data.name || "" };
+    } catch (err: any) {
+      return { valid: false, error: err.message || "Network error" };
+    }
   }
 }

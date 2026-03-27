@@ -53,3 +53,4 @@
 - [x] Build route optimization (minimize drive time between stops)
 - [x] Add "Start Route" button to open optimized route in Apple/Google Maps
 - [x] Add estimated drive times between stops
+- [x] Fix Clover API validation rejecting valid credentials (UUID token + numeric merchant ID)

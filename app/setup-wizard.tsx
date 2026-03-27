@@ -83,13 +83,32 @@ export default function SetupWizardScreen() {
           [{ text: "Continue", onPress: goNext }]
         );
       } else {
+        // Save anyway but warn the user
         Alert.alert(
-          "Invalid Credentials",
-          "Could not connect to Clover with those credentials. Please double-check your API Token and Merchant ID."
+          "Could Not Verify",
+          `Clover returned an error: ${result.error || "Unknown error"}\n\nWould you like to save these credentials anyway and try again later?`,
+          [
+            { text: "Try Again", style: "cancel" },
+            {
+              text: "Save Anyway",
+              onPress: async () => {
+                await saveCloverConfig(token, merchant);
+                setCloverSaved(true);
+                goNext();
+              },
+            },
+          ]
         );
       }
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to validate Clover credentials.");
+      // Network error — save anyway
+      await saveCloverConfig(token, merchant);
+      setCloverSaved(true);
+      Alert.alert(
+        "Saved",
+        "Credentials saved. Could not verify the connection right now — it will be tested when you first use Clover.",
+        [{ text: "Continue", onPress: goNext }]
+      );
     } finally {
       setValidating(false);
     }
