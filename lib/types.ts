@@ -43,6 +43,14 @@ export interface Message {
 
 export type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "no-show";
 
+export interface AppointmentLocation {
+  type: "customer" | "drop-in" | "custom";
+  dropInId?: string; // if type is drop-in
+  address: Address;
+  latitude?: number;
+  longitude?: number;
+}
+
 export interface Appointment {
   id: string;
   customerId: string;
@@ -52,6 +60,7 @@ export interface Appointment {
   service: string;
   status: AppointmentStatus;
   notes: string;
+  location?: AppointmentLocation;
   createdAt: string;
   updatedAt: string;
 }
@@ -106,6 +115,52 @@ export interface CloverPayment {
   taxAmount: number;
   result: string;
   createdTime: number;
+}
+
+export type FollowUpType = "new-lead" | "repeat-customer";
+export type FollowUpStatus = "pending" | "contacted" | "booked" | "declined";
+
+export interface FollowUp {
+  id: string;
+  customerId: string;
+  type: FollowUpType;
+  status: FollowUpStatus;
+  area: string; // zone/area name for grouping
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DropInLocation {
+  id: string;
+  name: string;
+  address: Address;
+  latitude?: number;
+  longitude?: number;
+  notes: string;
+  createdAt: string;
+}
+
+export interface RouteStop {
+  id: string;
+  appointmentId: string;
+  customerId: string;
+  address: Address;
+  latitude?: number;
+  longitude?: number;
+  order: number; // stop order in the route
+  estimatedArrival?: string;
+  estimatedDriveMinutes?: number; // drive time from previous stop
+}
+
+export interface DayRoute {
+  id: string;
+  date: string; // ISO date
+  area: string;
+  stops: RouteStop[];
+  totalDriveMinutes?: number;
+  status: "draft" | "active" | "completed";
+  createdAt: string;
 }
 
 /** Data extracted from message history by AI */

@@ -40,6 +40,16 @@ const MAPPING = {
   "sparkles": "auto-awesome",
   "arrow.clockwise": "refresh",
   "bubble.left.and.bubble.right": "forum",
+  "list.bullet.clipboard": "assignment",
+  "map.fill": "map",
+  "location.fill": "my-location",
+  "flag.fill": "flag",
+  "bell.fill": "notifications",
+  "arrow.triangle.turn.up.right.diamond.fill": "directions",
+  "pin.fill": "push-pin",
+  "repeat": "repeat",
+  "person.badge.plus": "person-add",
+  "star.fill": "star",
 } as IconMapping;
 
 export function IconSymbol({

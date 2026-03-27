@@ -25,6 +25,9 @@ export default function TabLayout() {
           borderTopColor: colors.border,
           borderTopWidth: 0.5,
         },
+        tabBarLabelStyle: {
+          fontSize: 10,
+        },
       }}
     >
       <Tabs.Screen
@@ -32,16 +35,34 @@ export default function TabLayout() {
         options={{
           title: "Customers",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.2.fill" color={color} />
+            <IconSymbol size={24} name="person.2.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="follow-ups"
+        options={{
+          title: "Follow-ups",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={24} name="list.bullet.clipboard" color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="appointments"
         options={{
-          title: "Appointments",
+          title: "Schedule",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="calendar" color={color} />
+            <IconSymbol size={24} name="calendar" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="routes"
+        options={{
+          title: "Routes",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={24} name="map.fill" color={color} />
           ),
         }}
       />
@@ -50,7 +71,7 @@ export default function TabLayout() {
         options={{
           title: "Settings",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="gearshape.fill" color={color} />
+            <IconSymbol size={24} name="gearshape.fill" color={color} />
           ),
         }}
       />

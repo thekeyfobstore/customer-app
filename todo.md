@@ -41,3 +41,15 @@
 - [x] Build guided setup wizard for OpenPhone API key with step-by-step instructions
 - [x] Build guided setup wizard for Clover API token and Merchant ID with permission guidance
 - [x] Add security info screen explaining how keys are stored and protected
+- [x] Add FollowUp data model (lead type: new-lead vs repeat-customer, area/zone, status, location)
+- [x] Add DropInLocation data model (name, address, coordinates, notes)
+- [x] Add location/address field to Appointment model
+- [x] Add area/zone tagging to customers based on address
+- [x] Build Follow-ups tab with area-grouped lists (new leads + repeat customers)
+- [x] Build "Schedule Route" flow — batch-book appointments for an area on a date
+- [x] Build Drop-in Location management (add/edit/delete saved spots)
+- [x] Build location picker for appointments (customer address, drop-in spot, or custom)
+- [x] Build Route Planner with map view showing daily stops with pins
+- [x] Build route optimization (minimize drive time between stops)
+- [x] Add "Start Route" button to open optimized route in Apple/Google Maps
+- [x] Add estimated drive times between stops

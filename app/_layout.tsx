@@ -102,6 +102,9 @@ export default function RootLayout() {
               <Stack.Screen name="charge/index" options={{ presentation: "modal" }} />
               <Stack.Screen name="service-history/index" options={{ presentation: "card" }} />
               <Stack.Screen name="setup-wizard" options={{ presentation: "fullScreenModal" }} />
+              <Stack.Screen name="follow-up/add" options={{ presentation: "modal" }} />
+              <Stack.Screen name="batch-book/index" options={{ presentation: "modal" }} />
+              <Stack.Screen name="drop-in/index" options={{ presentation: "card" }} />
             </Stack>
           </DataProvider>
           <StatusBar style="auto" />
