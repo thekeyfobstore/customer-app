@@ -306,7 +306,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch(`${baseUrl}/api/trpc/contacts.list`, { credentials: "include" });
         if (!res.ok) return;
         const json = await res.json();
-        const serverContacts = json?.result?.data || [];
+        const serverContacts = json?.result?.data?.json || json?.result?.data || [];
         if (!active || serverContacts.length === 0) return;
 
         // Convert server DB rows to Customer objects

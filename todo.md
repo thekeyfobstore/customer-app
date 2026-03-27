@@ -104,3 +104,4 @@
 - [x] Fix oversized "Customers" title on customer list screen
 - [x] Fix blank/unlabeled filter chips (status, route, area)
 - [x] Fix contact names showing vehicle/phone info instead of person name
+- [x] Fix JSON path for server contacts (result.data.json) so all 4000+ contacts load
