@@ -98,3 +98,4 @@
 - [x] Show route on customer detail screen and allow editing
 - [x] Add route to add/edit customer form
 - [x] Sort customer list by most recent conversation (last message time) to match phone system order
+- [x] Add long-press on phone/text buttons to open OpenPhone app for that contact

@@ -36,6 +36,7 @@ import { Linking } from "react-native";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
+import * as Clipboard from "expo-clipboard";
 
 type Tab = "info" | "messages" | "appointments" | "quotes";
 
@@ -321,24 +322,72 @@ export default function CustomerDetailScreen() {
       )}
 
       {/* Open in OpenPhone */}
-      {customer.openPhoneContactId ? (
-        <Pressable
-          onPress={() => {
-            // OpenPhone deep link: openphone://contacts/{contactId}
-            const url = `https://app.openphone.com/contacts/${customer.openPhoneContactId}`;
-            Linking.openURL(url).catch(() => {
-              Alert.alert("Cannot Open", "Could not open OpenPhone. Make sure it's installed.");
-            });
-          }}
-          style={({ pressed }) => [
-            styles.openPhoneButton,
-            { borderColor: colors.border },
-            pressed && { opacity: 0.7 },
-          ]}
-        >
-          <IconSymbol name="message.fill" size={18} color={colors.primary} />
-          <Text style={[styles.openPhoneText, { color: colors.primary }]}>Open in OpenPhone</Text>
-        </Pressable>
+      {customer.phone ? (
+        <View style={styles.phoneActionsRow}>
+          <Pressable
+            onPress={() => {
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              // Try openphone:// deep link first, fall back to tel:
+              Linking.openURL("openphone://").catch(() => {
+                Linking.openURL(`tel:${customer.phone}`).catch(() => {
+                  Alert.alert("Cannot Call", "Could not open phone app.");
+                });
+              });
+            }}
+            onLongPress={() => {
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              Clipboard.setStringAsync(customer.phone);
+              Alert.alert("Copied", `${formatPhone(customer.phone)} copied to clipboard`);
+            }}
+            style={({ pressed }) => [
+              styles.phoneActionBtn,
+              { backgroundColor: colors.primary },
+              pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+            ]}
+          >
+            <IconSymbol name="phone.fill" size={18} color="#FFFFFF" />
+            <Text style={styles.phoneActionBtnText}>Call</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              // Try openphone:// deep link first, fall back to sms:
+              Linking.openURL("openphone://").catch(() => {
+                Linking.openURL(`sms:${customer.phone}`).catch(() => {
+                  Alert.alert("Cannot Text", "Could not open messaging app.");
+                });
+              });
+            }}
+            onLongPress={() => {
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              Clipboard.setStringAsync(customer.phone);
+              Alert.alert("Copied", `${formatPhone(customer.phone)} copied to clipboard`);
+            }}
+            style={({ pressed }) => [
+              styles.phoneActionBtn,
+              { backgroundColor: "#22C55E" },
+              pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+            ]}
+          >
+            <IconSymbol name="message.fill" size={18} color="#FFFFFF" />
+            <Text style={styles.phoneActionBtnText}>Text</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              Clipboard.setStringAsync(customer.phone);
+              Alert.alert("Copied", `${formatPhone(customer.phone)} copied to clipboard`);
+            }}
+            style={({ pressed }) => [
+              styles.phoneActionBtn,
+              { backgroundColor: colors.muted },
+              pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+            ]}
+          >
+            <IconSymbol name="doc.text.fill" size={18} color="#FFFFFF" />
+            <Text style={styles.phoneActionBtnText}>Copy #</Text>
+          </Pressable>
+        </View>
       ) : null}
 
       {/* Quick Actions Row */}
@@ -938,6 +987,9 @@ const styles = StyleSheet.create({
   statusPickerText: { fontSize: 15, flex: 1 },
   openPhoneButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 20, marginBottom: 8, paddingVertical: 12, borderRadius: 14, borderWidth: 1 },
   openPhoneText: { fontSize: 15, fontWeight: "600" },
+  phoneActionsRow: { flexDirection: "row", gap: 10, marginHorizontal: 20, marginBottom: 8 },
+  phoneActionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 14 },
+  phoneActionBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
   photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
   photoThumb: { width: 100, height: 100, borderRadius: 10, overflow: "hidden" },
   photoImage: { width: "100%", height: "100%" },
