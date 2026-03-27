@@ -214,6 +214,29 @@ export interface DayRoute {
   createdAt: string;
 }
 
+/** A single quote option (e.g., OEM key vs aftermarket key) */
+export interface QuoteOption {
+  id: string;
+  label: string; // e.g., "OEM Key Fob", "Aftermarket Key"
+  description: string;
+  price: number; // in cents
+}
+
+/** A quote sent to a customer */
+export interface Quote {
+  id: string;
+  customerId: string;
+  vehicleId?: string;
+  service: string; // e.g., "Key Fob Programming"
+  options: QuoteOption[];
+  notes: string;
+  status: "draft" | "sent" | "accepted" | "rejected";
+  acceptedOptionId?: string;
+  sentAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** Data extracted from message history by AI */
 export interface ExtractedInfo {
   firstName?: string;

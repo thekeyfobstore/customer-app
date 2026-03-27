@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Customer, Appointment, Message, ServiceRecord, CloverOrder, FollowUp, DropInLocation, DayRoute } from "./types";
+import { Customer, Appointment, Message, ServiceRecord, CloverOrder, FollowUp, DropInLocation, DayRoute, Quote } from "./types";
 import {
   loadApiKeySecure, saveApiKeySecure, clearApiKeySecure,
   loadCloverConfigSecure, saveCloverConfigSecure, clearCloverConfigSecure,
@@ -17,6 +17,7 @@ const KEYS = {
   FOLLOW_UPS: "@clientbook_follow_ups",
   DROP_IN_LOCATIONS: "@clientbook_drop_in_locations",
   DAY_ROUTES: "@clientbook_day_routes",
+  QUOTES: "@clientbook_quotes",
 };
 
 export async function loadCustomers(): Promise<Customer[]> {
@@ -154,6 +155,20 @@ export async function loadDayRoutes(): Promise<DayRoute[]> {
 
 export async function saveDayRoutes(routes: DayRoute[]): Promise<void> {
   await AsyncStorage.setItem(KEYS.DAY_ROUTES, JSON.stringify(routes));
+}
+
+// Quotes
+export async function loadQuotes(): Promise<Quote[]> {
+  try {
+    const data = await AsyncStorage.getItem(KEYS.QUOTES);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveQuotes(quotes: Quote[]): Promise<void> {
+  await AsyncStorage.setItem(KEYS.QUOTES, JSON.stringify(quotes));
 }
 
 export async function exportAllData(): Promise<string> {

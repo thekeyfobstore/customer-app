@@ -54,6 +54,9 @@ const MAPPING = {
   "camera.fill": "camera-alt",
   "photo.fill": "photo",
   "photo.on.rectangle": "collections",
+  "checkmark.circle.fill": "check-circle",
+  "doc.text.fill": "description",
+  "dollarsign.circle.fill": "attach-money",
 } as IconMapping;
 
 export function IconSymbol({

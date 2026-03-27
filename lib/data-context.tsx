@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useReducer, useCallback } from "react";
-import { Customer, Vehicle, Appointment, Message, ServiceRecord, CloverOrder, FollowUp, DropInLocation, DayRoute } from "./types";
+import { Customer, Vehicle, Appointment, Message, ServiceRecord, CloverOrder, FollowUp, DropInLocation, DayRoute, Quote } from "./types";
 import {
   loadCustomers, saveCustomers,
   loadAppointments, saveAppointments,
@@ -9,6 +9,7 @@ import {
   loadFollowUps, saveFollowUps,
   loadDropInLocations, saveDropInLocations,
   loadDayRoutes, saveDayRoutes,
+  loadQuotes, saveQuotes,
 } from "./storage";
 import { migrateKeysToSecureStore } from "./secure-storage";
 import { getApiBaseUrl } from "@/constants/oauth";
@@ -22,6 +23,7 @@ interface DataState {
   followUps: FollowUp[];
   dropInLocations: DropInLocation[];
   dayRoutes: DayRoute[];
+  quotes: Quote[];
   loading: boolean;
 }
 
@@ -55,7 +57,11 @@ type DataAction =
   | { type: "DELETE_DROP_IN_LOCATION"; payload: string }
   | { type: "ADD_DAY_ROUTE"; payload: DayRoute }
   | { type: "UPDATE_DAY_ROUTE"; payload: DayRoute }
-  | { type: "DELETE_DAY_ROUTE"; payload: string };
+  | { type: "DELETE_DAY_ROUTE"; payload: string }
+  | { type: "SET_QUOTES"; payload: Quote[] }
+  | { type: "ADD_QUOTE"; payload: Quote }
+  | { type: "UPDATE_QUOTE"; payload: Quote }
+  | { type: "DELETE_QUOTE"; payload: string };
 
 function dataReducer(state: DataState, action: DataAction): DataState {
   switch (action.type) {
@@ -193,6 +199,14 @@ function dataReducer(state: DataState, action: DataAction): DataState {
       return { ...state, dayRoutes: state.dayRoutes.map((r) => r.id === action.payload.id ? action.payload : r) };
     case "DELETE_DAY_ROUTE":
       return { ...state, dayRoutes: state.dayRoutes.filter((r) => r.id !== action.payload) };
+    case "SET_QUOTES":
+      return { ...state, quotes: action.payload };
+    case "ADD_QUOTE":
+      return { ...state, quotes: [...state.quotes, action.payload] };
+    case "UPDATE_QUOTE":
+      return { ...state, quotes: state.quotes.map((q) => q.id === action.payload.id ? action.payload : q) };
+    case "DELETE_QUOTE":
+      return { ...state, quotes: state.quotes.filter((q) => q.id !== action.payload) };
     default:
       return state;
   }
@@ -219,6 +233,10 @@ interface DataContextValue extends DataState {
   addDayRoute: (route: DayRoute) => void;
   updateDayRoute: (route: DayRoute) => void;
   deleteDayRoute: (id: string) => void;
+  addQuote: (quote: Quote) => void;
+  updateQuote: (quote: Quote) => void;
+  deleteQuote: (id: string) => void;
+  getQuotesForCustomer: (customerId: string) => Quote[];
   getCustomerById: (id: string) => Customer | undefined;
   getCustomerByPhone: (phone: string) => Customer | undefined;
   getAppointmentsForCustomer: (customerId: string) => Appointment[];
@@ -245,13 +263,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     followUps: [],
     dropInLocations: [],
     dayRoutes: [],
+    quotes: [],
     loading: true,
   });
 
   const refreshData = useCallback(async () => {
     dispatch({ type: "SET_LOADING", payload: true });
     await migrateKeysToSecureStore();
-    const [customers, appointments, messages, serviceRecords, cloverOrders, followUps, dropInLocations, dayRoutes] = await Promise.all([
+    const [customers, appointments, messages, serviceRecords, cloverOrders, followUps, dropInLocations, dayRoutes, quotes] = await Promise.all([
       loadCustomers(),
       loadAppointments(),
       loadMessages(),
@@ -260,6 +279,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       loadFollowUps(),
       loadDropInLocations(),
       loadDayRoutes(),
+      loadQuotes(),
     ]);
     dispatch({ type: "SET_CUSTOMERS", payload: customers });
     dispatch({ type: "SET_APPOINTMENTS", payload: appointments });
@@ -269,6 +289,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "SET_FOLLOW_UPS", payload: followUps });
     dispatch({ type: "SET_DROP_IN_LOCATIONS", payload: dropInLocations });
     dispatch({ type: "SET_DAY_ROUTES", payload: dayRoutes });
+    dispatch({ type: "SET_QUOTES", payload: quotes });
     dispatch({ type: "SET_LOADING", payload: false });
   }, []);
 
@@ -349,6 +370,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { if (!state.loading) saveFollowUps(state.followUps); }, [state.followUps, state.loading]);
   useEffect(() => { if (!state.loading) saveDropInLocations(state.dropInLocations); }, [state.dropInLocations, state.loading]);
   useEffect(() => { if (!state.loading) saveDayRoutes(state.dayRoutes); }, [state.dayRoutes, state.loading]);
+  useEffect(() => { if (!state.loading) saveQuotes(state.quotes); }, [state.quotes, state.loading]);
 
   const addCustomer = useCallback((c: Customer) => dispatch({ type: "ADD_CUSTOMER", payload: c }), []);
   const updateCustomer = useCallback((c: Customer) => dispatch({ type: "UPDATE_CUSTOMER", payload: c }), []);
@@ -370,6 +392,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const addDayRoute = useCallback((r: DayRoute) => dispatch({ type: "ADD_DAY_ROUTE", payload: r }), []);
   const updateDayRoute = useCallback((r: DayRoute) => dispatch({ type: "UPDATE_DAY_ROUTE", payload: r }), []);
   const deleteDayRoute = useCallback((id: string) => dispatch({ type: "DELETE_DAY_ROUTE", payload: id }), []);
+  const addQuote = useCallback((q: Quote) => dispatch({ type: "ADD_QUOTE", payload: q }), []);
+  const updateQuote = useCallback((q: Quote) => dispatch({ type: "UPDATE_QUOTE", payload: q }), []);
+  const deleteQuote = useCallback((id: string) => dispatch({ type: "DELETE_QUOTE", payload: id }), []);
+  const getQuotesForCustomer = useCallback(
+    (customerId: string) =>
+      state.quotes
+        .filter((q) => q.customerId === customerId)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [state.quotes]
+  );
 
   const getCustomerById = useCallback(
     (id: string) => state.customers.find((c) => c.id === id),
@@ -469,6 +501,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         addFollowUp, updateFollowUp, deleteFollowUp,
         addDropInLocation, updateDropInLocation, deleteDropInLocation,
         addDayRoute, updateDayRoute, deleteDayRoute,
+        addQuote, updateQuote, deleteQuote, getQuotesForCustomer,
         getCustomerById, getCustomerByPhone,
         getAppointmentsForCustomer, getMessagesForCustomer,
         getServiceRecordsForVehicle, getServiceRecordsForCustomer,

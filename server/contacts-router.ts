@@ -6,6 +6,11 @@ import {
   setOpenPhoneApiKey,
   triggerSync,
 } from "./openphone-sync";
+import { triggerMessagePoll } from "./message-poller";
+import { listWebhooks } from "./message-webhook";
+import { getDb } from "./db";
+import { appSettings } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 export const contactsRouter = router({
   /**
@@ -44,5 +49,59 @@ export const contactsRouter = router({
     await triggerSync();
     const status = await getSyncStatus();
     return { success: true, ...status };
+  }),
+
+  /**
+   * Get the message automation status (webhook + poller).
+   */
+  messageAutomationStatus: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return { active: false, webhookRegistered: false, lastPoll: null, extractionCount: 0 };
+
+    // Check if API key is configured
+    const apiKeyRows = await db.select().from(appSettings).where(eq(appSettings.key, "openphone_api_key")).limit(1);
+    const apiKey = apiKeyRows.length > 0 ? apiKeyRows[0].value : null;
+
+    // Check webhook registration
+    let webhookRegistered = false;
+    if (apiKey) {
+      try {
+        const webhooks = await listWebhooks(apiKey);
+        webhookRegistered = webhooks.some(
+          (w: any) => w.url?.includes("/api/webhooks/openphone") && w.status === "enabled"
+        );
+      } catch { /* ignore */ }
+    }
+
+    // Get last poll time
+    const pollRows = await db.select().from(appSettings).where(eq(appSettings.key, "last_message_poll_time")).limit(1);
+    const lastPoll = pollRows.length > 0 ? pollRows[0].value : null;
+
+    // Get extraction count (contacts created from messages)
+    let extractionCount = 0;
+    try {
+      const allContacts = await getSyncedContacts();
+      extractionCount = allContacts.filter((c: any) => {
+        try {
+          const raw = c.rawJson ? JSON.parse(c.rawJson) : {};
+          return raw.source === "message_webhook" || raw.lastExtraction;
+        } catch { return false; }
+      }).length;
+    } catch { /* ignore */ }
+
+    return {
+      active: !!apiKey,
+      webhookRegistered,
+      lastPoll,
+      extractionCount,
+    };
+  }),
+
+  /**
+   * Trigger an immediate message poll (check for new messages now).
+   */
+  pollMessagesNow: publicProcedure.mutation(async () => {
+    const result = await triggerMessagePoll();
+    return { success: true, ...result };
   }),
 });

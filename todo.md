@@ -85,3 +85,9 @@
 - [x] Add photo attachments to customer profiles (camera + gallery, stored with customer)
 - [x] Two-way sync: push customers created in ClientBook back to OpenPhone (fixed API name field)
 - [x] Add duplicate detection by phone number (prevent same customer imported twice)
+- [x] Set up OpenPhone message webhook to receive incoming texts on the server
+- [x] Build server-side AI message extraction (parse name, vehicle, location, service from texts)
+- [x] Auto-create/update customer profiles from extracted message data
+- [x] Build quick-quote feature with multi-option (OEM/aftermarket) support
+- [x] Send quote via OpenPhone text message
+- [x] Auto-set customer status to "Quote Sent" after sending quote

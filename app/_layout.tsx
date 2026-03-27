@@ -106,6 +106,8 @@ export default function RootLayout() {
               <Stack.Screen name="batch-book/index" options={{ presentation: "modal" }} />
               <Stack.Screen name="drop-in/index" options={{ presentation: "card" }} />
               <Stack.Screen name="link" options={{ presentation: "card" }} />
+              <Stack.Screen name="quote/create" options={{ presentation: "modal" }} />
+              <Stack.Screen name="quote/[id]" options={{ presentation: "card" }} />
             </Stack>
           </DataProvider>
           <StatusBar style="auto" />

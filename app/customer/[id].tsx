@@ -37,7 +37,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 
-type Tab = "info" | "messages" | "appointments";
+type Tab = "info" | "messages" | "appointments" | "quotes";
 
 export default function CustomerDetailScreen() {
   const colors = useColors();
@@ -47,10 +47,13 @@ export default function CustomerDetailScreen() {
     getCustomerById,
     getAppointmentsForCustomer,
     getMessagesForCustomer,
+    getQuotesForCustomer,
     deleteCustomer,
     updateCustomer,
     addMessages,
   } = useData();
+
+  const quotes = getQuotesForCustomer(id || "");
 
   const customer = getCustomerById(id || "");
   const appointments = getAppointmentsForCustomer(id || "");
@@ -338,9 +341,35 @@ export default function CustomerDetailScreen() {
         </Pressable>
       ) : null}
 
-      {/* Quick Book Button */}
-      <Pressable
-        onPress={() => router.push({ pathname: "/appointment/add" as any, params: { customerId: customer.id } })}
+      {/* Quick Actions Row */}
+      <View style={styles.quickActionsRow}>
+        <Pressable
+          onPress={() => router.push({ pathname: "/quote/create" as any, params: { customerId: customer.id } })}
+          style={({ pressed }) => [
+            styles.quickActionButton,
+            { backgroundColor: colors.success },
+            pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+          ]}
+        >
+          <IconSymbol name="dollarsign.circle.fill" size={20} color="#FFFFFF" />
+          <Text style={styles.quickActionText}>Quick Quote</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.push({ pathname: "/appointment/add" as any, params: { customerId: customer.id } })}
+          style={({ pressed }) => [
+            styles.quickActionButton,
+            { backgroundColor: colors.primary },
+            pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+          ]}
+        >
+          <IconSymbol name="calendar.badge.plus" size={20} color="#FFFFFF" />
+          <Text style={styles.quickActionText}>Book Appt</Text>
+        </Pressable>
+      </View>
+
+      {/* Quick Book Button - hidden, replaced by row above */}
+      {false && <Pressable
+        onPress={() => router.push({ pathname: "/appointment/add" as any, params: { customerId: customer?.id || "" } })}
         style={({ pressed }) => [
           styles.bookButton,
           { backgroundColor: colors.primary },
@@ -349,11 +378,11 @@ export default function CustomerDetailScreen() {
       >
         <IconSymbol name="calendar.badge.plus" size={22} color="#FFFFFF" />
         <Text style={styles.bookButtonText}>Book Appointment</Text>
-      </Pressable>
+      </Pressable>}
 
       {/* Tab Switcher */}
       <View style={[styles.tabBar, { backgroundColor: colors.surface }]}>
-        {(["info", "messages", "appointments"] as Tab[]).map((tab) => (
+        {(["info", "messages", "quotes", "appointments"] as Tab[]).map((tab) => (
           <Pressable
             key={tab}
             onPress={() => setActiveTab(tab)}
@@ -370,7 +399,7 @@ export default function CustomerDetailScreen() {
                 activeTab === tab && { fontWeight: "600" },
               ]}
             >
-              {tab === "info" ? "Info" : tab === "messages" ? `Messages (${messages.length})` : `Appts (${appointments.length})`}
+              {tab === "info" ? "Info" : tab === "messages" ? `Messages (${messages.length})` : tab === "quotes" ? `Quotes (${quotes.length})` : `Appts (${appointments.length})`}
             </Text>
           </Pressable>
         ))}
@@ -717,6 +746,70 @@ export default function CustomerDetailScreen() {
         </View>
       )}
 
+      {activeTab === "quotes" && (
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+              Quotes ({quotes.length})
+            </Text>
+            <Pressable
+              onPress={() => router.push({ pathname: "/quote/create" as any, params: { customerId: customer?.id || "" } })}
+              style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+            >
+              <IconSymbol name="plus" size={22} color={colors.primary} />
+            </Pressable>
+          </View>
+          {quotes.length === 0 ? (
+            <View style={styles.emptyQuotes}>
+              <IconSymbol name="dollarsign.circle.fill" size={40} color={colors.muted} />
+              <Text style={{ color: colors.muted, fontSize: 15 }}>No quotes yet</Text>
+              <Pressable
+                onPress={() => router.push({ pathname: "/quote/create" as any, params: { customerId: customer?.id || "" } })}
+                style={({ pressed }) => [
+                  { backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, marginTop: 8 },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "600" }}>Create Quote</Text>
+              </Pressable>
+            </View>
+          ) : (
+            quotes.map((q) => {
+              const sc = { draft: { bg: "#E5E7EB", text: "#6B7280" }, sent: { bg: "#DBEAFE", text: "#1E40AF" }, accepted: { bg: "#D1FAE5", text: "#065F46" }, rejected: { bg: "#FEE2E2", text: "#991B1B" } }[q.status] || { bg: "#E5E7EB", text: "#6B7280" };
+              return (
+                <Pressable
+                  key={q.id}
+                  onPress={() => router.push({ pathname: "/quote/[id]" as any, params: { id: q.id, customerId: customer?.id || "" } })}
+                  style={({ pressed }) => [
+                    styles.quoteCard,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <View style={styles.quoteCardHeader}>
+                    <Text style={[styles.quoteService, { color: colors.foreground }]} numberOfLines={1}>{q.service}</Text>
+                    <View style={[styles.quoteStatusBadge, { backgroundColor: sc.bg }]}>
+                      <Text style={[styles.quoteStatusText, { color: sc.text }]}>
+                        {q.status.charAt(0).toUpperCase() + q.status.slice(1)}
+                      </Text>
+                    </View>
+                  </View>
+                  {q.options.map((opt) => (
+                    <View key={opt.id} style={styles.quoteOptionRow}>
+                      <Text style={[styles.quoteOptionLabel, { color: colors.muted }]}>{opt.label}</Text>
+                      <Text style={[styles.quoteOptionPrice, { color: colors.foreground }]}>${(opt.price / 100).toFixed(2)}</Text>
+                    </View>
+                  ))}
+                  <Text style={[styles.quoteDate, { color: colors.muted }]}>
+                    {new Date(q.createdAt).toLocaleDateString()}
+                  </Text>
+                </Pressable>
+              );
+            })
+          )}
+        </ScrollView>
+      )}
+
       {activeTab === "appointments" && (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.sectionHeader}>
@@ -847,4 +940,17 @@ const styles = StyleSheet.create({
   photoCloseBtn: { padding: 10, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20 },
   photoFull: { width: "90%", height: "60%" },
   photoCaption: { color: "#FFFFFF", fontSize: 15, marginTop: 12, textAlign: "center" },
+  quickActionsRow: { flexDirection: "row", gap: 10, marginHorizontal: 20, marginBottom: 8 },
+  quickActionButton: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 14 },
+  quickActionText: { color: "#FFFFFF", fontSize: 15, fontWeight: "600" },
+  quoteCard: { borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 10, gap: 6 },
+  quoteCardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  quoteService: { fontSize: 16, fontWeight: "600", flex: 1 },
+  quoteStatusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
+  quoteStatusText: { fontSize: 12, fontWeight: "700" },
+  quoteOptionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 4 },
+  quoteOptionLabel: { fontSize: 14 },
+  quoteOptionPrice: { fontSize: 15, fontWeight: "600" },
+  quoteDate: { fontSize: 12, marginTop: 4 },
+  emptyQuotes: { alignItems: "center", paddingVertical: 40, gap: 12 },
 });

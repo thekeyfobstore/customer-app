@@ -50,6 +50,12 @@ export default function SettingsScreen() {
     onSuccess: () => syncStatus.refetch(),
   });
 
+  // Message automation status
+  const messageStatus = trpc.contacts.messageAutomationStatus.useQuery(undefined, { refetchInterval: 30000 });
+  const pollMessagesMutation = trpc.contacts.pollMessagesNow.useMutation({
+    onSuccess: () => messageStatus.refetch(),
+  });
+
   // Clover state
   const [cloverToken, setCloverToken] = useState("");
   const [cloverMerchant, setCloverMerchant] = useState("");
@@ -279,6 +285,37 @@ export default function SettingsScreen() {
             >
               <Text style={[styles.actionLink, { color: colors.primary }]}>
                 {syncNowMutation.isPending ? "Syncing..." : "Sync Now"}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Message Automation Banner */}
+        {messageStatus.data?.active && (
+          <View style={[styles.syncBanner, { backgroundColor: colors.primary + "10", borderColor: colors.primary + "30", marginBottom: 8 }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+              <IconSymbol name="sparkles" size={16} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.syncText, { color: colors.foreground }]}>
+                  Message AI Active{messageStatus.data.extractionCount > 0 ? ` — ${messageStatus.data.extractionCount} extracted` : ""}
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.muted }}>
+                  {messageStatus.data.webhookRegistered
+                    ? "Real-time webhook + polling every 2 min"
+                    : "Polling every 2 min (webhook pending)"}
+                  {messageStatus.data.lastPoll
+                    ? ` · Last: ${new Date(messageStatus.data.lastPoll).toLocaleTimeString()}`
+                    : ""}
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={() => pollMessagesMutation.mutate()}
+              disabled={pollMessagesMutation.isPending}
+              style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Text style={[styles.actionLink, { color: colors.primary }]}>
+                {pollMessagesMutation.isPending ? "Checking..." : "Check Now"}
               </Text>
             </Pressable>
           </View>
