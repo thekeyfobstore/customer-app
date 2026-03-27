@@ -67,3 +67,5 @@
 - [x] Update vehicle add/edit forms with Key Code, Dealer Comparison, and Part Number fields
 - [x] Update customer detail to show Key Code, Dealer Comparison, and Part Number
 - [x] Update search to include new fields (keyCode, dealerComparison, partNumber)
+- [x] Add deep link support to open customer profile from OpenPhone (by phone number)
+- [x] Provide instructions for adding deep link to OpenPhone contacts

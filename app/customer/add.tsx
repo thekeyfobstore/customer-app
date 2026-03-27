@@ -9,7 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
@@ -26,7 +26,8 @@ export default function AddCustomerScreen() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
+  const params = useLocalSearchParams<{ phone?: string }>();
+  const [phone, setPhone] = useState(params.phone || "");
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
   const [notes, setNotes] = useState("");

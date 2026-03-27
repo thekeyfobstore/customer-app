@@ -153,6 +153,7 @@ interface DataContextValue extends DataState {
   updateDayRoute: (route: DayRoute) => void;
   deleteDayRoute: (id: string) => void;
   getCustomerById: (id: string) => Customer | undefined;
+  getCustomerByPhone: (phone: string) => Customer | undefined;
   getAppointmentsForCustomer: (customerId: string) => Appointment[];
   getMessagesForCustomer: (customerId: string) => Message[];
   getServiceRecordsForVehicle: (vehicleId: string) => ServiceRecord[];
@@ -242,6 +243,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [state.customers]
   );
 
+  const getCustomerByPhone = useCallback(
+    (phone: string) => {
+      const digits = phone.replace(/\D/g, "");
+      const normalized = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+      return state.customers.find((c) => {
+        const cDigits = (c.phone || "").replace(/\D/g, "");
+        const cNorm = cDigits.length === 11 && cDigits.startsWith("1") ? cDigits.slice(1) : cDigits;
+        return cNorm === normalized && normalized.length >= 7;
+      });
+    },
+    [state.customers]
+  );
+
   const getAppointmentsForCustomer = useCallback(
     (customerId: string) =>
       state.appointments
@@ -322,7 +336,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         addFollowUp, updateFollowUp, deleteFollowUp,
         addDropInLocation, updateDropInLocation, deleteDropInLocation,
         addDayRoute, updateDayRoute, deleteDayRoute,
-        getCustomerById,
+        getCustomerById, getCustomerByPhone,
         getAppointmentsForCustomer, getMessagesForCustomer,
         getServiceRecordsForVehicle, getServiceRecordsForCustomer,
         getCloverOrdersForCustomer,

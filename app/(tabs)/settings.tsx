@@ -428,6 +428,31 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Deep Link */}
+        <Text style={[styles.sectionLabel, { color: colors.muted }]}>OPENPHONE DEEP LINK</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.sectionRow}>
+            <IconSymbol name="paperplane.fill" size={20} color={colors.primary} />
+            <View style={styles.sectionRowContent}>
+              <Text style={[styles.sectionRowTitle, { color: colors.foreground }]}>Quick Open from OpenPhone</Text>
+              <Text style={[styles.sectionRowValue, { color: colors.muted }]}>
+                Add this link format as a note in OpenPhone contacts to jump straight to their profile in ClientBook
+              </Text>
+              <View style={{ marginTop: 8, backgroundColor: colors.background, borderRadius: 8, padding: 10 }}>
+                <Text style={{ fontSize: 13, fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", color: colors.primary }} selectable>
+                  {`https://custcrmapp-nxdjk2u8.manus.space/link?phone=PHONE_NUMBER`}
+                </Text>
+              </View>
+              <Text style={[styles.hintText, { color: colors.muted, marginTop: 6 }]}>
+                Replace PHONE_NUMBER with the customer's 10-digit number (e.g. 9025551234). When tapped, it opens their profile or lets you add them as a new customer.
+              </Text>
+              <Text style={[styles.hintText, { color: colors.muted, marginTop: 4 }]}>
+                Add ?action=book to go directly to booking (e.g. ...?phone=9025551234&action=book)
+              </Text>
+            </View>
+          </View>
+        </View>
+
         {/* About */}
         <Text style={[styles.sectionLabel, { color: colors.muted }]}>ABOUT</Text>
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
