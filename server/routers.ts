@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { extractRouter } from "./extract";
 import { cloverProxyRouter } from "./clover-proxy";
+import { contactsRouter } from "./contacts-router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -19,6 +20,7 @@ export const appRouter = router({
   }),
   extract: extractRouter,
   clover: cloverProxyRouter,
+  contacts: contactsRouter,
 });
 
 export type AppRouter = typeof appRouter;

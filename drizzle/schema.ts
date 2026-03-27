@@ -25,4 +25,40 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+/**
+ * Synced contacts from OpenPhone.
+ * Server polls OpenPhone every 2 minutes and upserts contacts here.
+ */
+export const contacts = mysqlTable("contacts", {
+  id: int("id").autoincrement().primaryKey(),
+  openPhoneId: varchar("openPhoneId", { length: 128 }).notNull().unique(),
+  firstName: text("firstName"),
+  lastName: text("lastName"),
+  phone: varchar("phone", { length: 32 }),
+  email: varchar("email", { length: 320 }),
+  company: text("company"),
+  vehicleYearMakeModel: text("vehicleYearMakeModel"),
+  vin: varchar("vin", { length: 64 }),
+  keyCode: varchar("keyCode", { length: 128 }),
+  dealerComparison: text("dealerComparison"),
+  partNumber: varchar("partNumber", { length: 128 }),
+  address: text("address"),
+  rawJson: text("rawJson"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Contact = typeof contacts.$inferSelect;
+export type InsertContact = typeof contacts.$inferInsert;
+
+/**
+ * App settings stored server-side (e.g., OpenPhone API key for auto-sync).
+ */
+export const appSettings = mysqlTable("appSettings", {
+  id: int("id").autoincrement().primaryKey(),
+  key: varchar("key", { length: 128 }).notNull().unique(),
+  value: text("value"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;

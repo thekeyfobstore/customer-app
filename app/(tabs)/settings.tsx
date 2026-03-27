@@ -30,6 +30,7 @@ import {
   scheduleAllReminders,
   cancelAllReminders,
 } from "@/lib/notifications";
+import { trpc } from "@/lib/trpc";
 
 export default function SettingsScreen() {
   const colors = useColors();
@@ -41,6 +42,13 @@ export default function SettingsScreen() {
   const [savedKey, setSavedKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [editingKey, setEditingKey] = useState(false);
+
+  // Sync status
+  const syncStatus = trpc.contacts.syncStatus.useQuery(undefined, { refetchInterval: 30000 });
+  const setApiKeyMutation = trpc.contacts.setApiKey.useMutation();
+  const syncNowMutation = trpc.contacts.syncNow.useMutation({
+    onSuccess: () => syncStatus.refetch(),
+  });
 
   // Clover state
   const [cloverToken, setCloverToken] = useState("");
@@ -68,11 +76,19 @@ export default function SettingsScreen() {
 
   // OpenPhone handlers
   const handleSaveKey = useCallback(async () => {
-    await saveApiKey(apiKey.trim());
-    setSavedKey(apiKey.trim());
+    const key = apiKey.trim();
+    await saveApiKey(key);
+    setSavedKey(key);
     setEditingKey(false);
-    Alert.alert("Saved", "Your OpenPhone API key has been saved.");
-  }, [apiKey]);
+    // Also save to server for auto-sync
+    try {
+      await setApiKeyMutation.mutateAsync({ apiKey: key });
+      syncStatus.refetch();
+      Alert.alert("Saved & Syncing", "Your OpenPhone API key has been saved. Contacts will sync automatically every 2 minutes.");
+    } catch {
+      Alert.alert("Saved Locally", "API key saved. Auto-sync could not be configured — contacts can still be imported manually.");
+    }
+  }, [apiKey, setApiKeyMutation, syncStatus]);
 
   const handleClearKey = useCallback(() => {
     Alert.alert("Remove API Key", "Are you sure you want to remove your OpenPhone API key?", [
@@ -239,6 +255,35 @@ export default function SettingsScreen() {
 
         {/* OpenPhone Section */}
         <Text style={[styles.sectionLabel, { color: colors.muted }]}>OPENPHONE</Text>
+
+        {/* Sync Status Banner */}
+        {syncStatus.data?.configured && (
+          <View style={[styles.syncBanner, { backgroundColor: colors.success + "10", borderColor: colors.success + "30" }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+              <View style={[styles.syncDot, { backgroundColor: colors.success }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.syncText, { color: colors.foreground }]}>
+                  Auto-Sync Active — {syncStatus.data.contactCount} contacts
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.muted }}>
+                  {syncStatus.data.lastSync
+                    ? `Last synced: ${new Date(syncStatus.data.lastSync).toLocaleTimeString()}`
+                    : "Syncing..."}
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={() => syncNowMutation.mutate()}
+              disabled={syncNowMutation.isPending}
+              style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Text style={[styles.actionLink, { color: colors.primary }]}>
+                {syncNowMutation.isPending ? "Syncing..." : "Sync Now"}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.sectionRow}>
             <IconSymbol name="key.fill" size={20} color={colors.primary} />
@@ -501,4 +546,7 @@ const styles = StyleSheet.create({
   wizardSubtitle: { fontSize: 13 },
   securityBanner: { flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, borderWidth: 1, gap: 8, marginBottom: 4 },
   securityText: { fontSize: 13, flex: 1 },
+  syncBanner: { flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, borderWidth: 1, gap: 8, marginBottom: 8 },
+  syncDot: { width: 8, height: 8, borderRadius: 4 },
+  syncText: { fontSize: 14, fontWeight: "500" },
 });

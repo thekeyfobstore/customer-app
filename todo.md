@@ -77,3 +77,7 @@
 - [x] Show status badge on customer cards in list view
 - [x] Add "Open in OpenPhone" link on customer detail and customer list cards
 - [ ] Add location/area filter on customer list alongside status filter
+- [x] Build server-side OpenPhone polling (every 2-3 min) for automatic contact sync
+- [x] Add contacts table to database schema
+- [x] Create tRPC endpoint for app to fetch synced contacts
+- [x] Update app to auto-refresh from server-synced contacts

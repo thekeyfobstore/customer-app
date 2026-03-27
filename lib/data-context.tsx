@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useReducer, useCallback } from "react";
-import { Customer, Appointment, Message, ServiceRecord, CloverOrder, FollowUp, DropInLocation, DayRoute } from "./types";
+import { Customer, Vehicle, Appointment, Message, ServiceRecord, CloverOrder, FollowUp, DropInLocation, DayRoute } from "./types";
 import {
   loadCustomers, saveCustomers,
   loadAppointments, saveAppointments,
@@ -11,6 +11,7 @@ import {
   loadDayRoutes, saveDayRoutes,
 } from "./storage";
 import { migrateKeysToSecureStore } from "./secure-storage";
+import { getApiBaseUrl } from "@/constants/oauth";
 
 interface DataState {
   customers: Customer[];
@@ -42,6 +43,7 @@ type DataAction =
   | { type: "DELETE_APPOINTMENT"; payload: string }
   | { type: "ADD_MESSAGES"; payload: Message[] }
   | { type: "IMPORT_CUSTOMERS"; payload: Customer[] }
+  | { type: "SYNC_CONTACTS"; payload: Customer[] }
   | { type: "ADD_SERVICE_RECORD"; payload: ServiceRecord }
   | { type: "ADD_CLOVER_ORDER"; payload: CloverOrder }
   | { type: "UPDATE_CLOVER_ORDER"; payload: CloverOrder }
@@ -101,6 +103,39 @@ function dataReducer(state: DataState, action: DataAction): DataState {
       const existingPhones = new Set(state.customers.map((c) => c.phone));
       const newCustomers = action.payload.filter((c) => !existingPhones.has(c.phone));
       return { ...state, customers: [...state.customers, ...newCustomers] };
+    }
+    case "SYNC_CONTACTS": {
+      // Merge server contacts: update existing by openPhoneContactId, add new ones by phone
+      const merged = [...state.customers];
+      const existingByOpenPhoneId = new Map(merged.filter(c => c.openPhoneContactId).map(c => [c.openPhoneContactId!, c]));
+      const existingByPhone = new Map(merged.map(c => [c.phone?.replace(/\D/g, ""), c]));
+      for (const serverContact of action.payload) {
+        const existingById = serverContact.openPhoneContactId ? existingByOpenPhoneId.get(serverContact.openPhoneContactId) : undefined;
+        const phoneDigits = serverContact.phone?.replace(/\D/g, "") || "";
+        const existingByPh = phoneDigits ? existingByPhone.get(phoneDigits) : undefined;
+        const existing = existingById || existingByPh;
+        if (existing) {
+          // Update existing: merge server data but keep local-only fields (status, appointments, etc.)
+          const idx = merged.findIndex(c => c.id === existing.id);
+          if (idx >= 0) {
+            merged[idx] = {
+              ...existing,
+              firstName: serverContact.firstName || existing.firstName,
+              lastName: serverContact.lastName || existing.lastName,
+              email: serverContact.email || existing.email,
+              company: serverContact.company || existing.company,
+              address: serverContact.address || existing.address,
+              vehicles: serverContact.vehicles && serverContact.vehicles.length > 0 ? serverContact.vehicles : existing.vehicles,
+              openPhoneContactId: serverContact.openPhoneContactId || existing.openPhoneContactId,
+              updatedAt: new Date().toISOString(),
+            };
+          }
+        } else if (phoneDigits.length >= 7) {
+          // New contact
+          merged.push(serverContact);
+        }
+      }
+      return { ...state, customers: merged };
     }
     case "ADD_SERVICE_RECORD":
       return { ...state, serviceRecords: [...state.serviceRecords, action.payload] };
@@ -206,6 +241,72 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => { refreshData(); }, [refreshData]);
+
+  // Server sync: poll for new contacts every 30 seconds
+  useEffect(() => {
+    let active = true;
+    const pollServerContacts = async () => {
+      try {
+        const baseUrl = getApiBaseUrl();
+        const res = await fetch(`${baseUrl}/api/trpc/contacts.list`, { credentials: "include" });
+        if (!res.ok) return;
+        const json = await res.json();
+        const serverContacts = json?.result?.data || [];
+        if (!active || serverContacts.length === 0) return;
+
+        // Convert server DB rows to Customer objects
+        const mapped: Customer[] = serverContacts.map((sc: any) => {
+          const vehicles: Vehicle[] = [];
+          if (sc.vehicleYearMakeModel || sc.vin || sc.keyCode || sc.dealerComparison || sc.partNumber) {
+            // Parse "2017 jeep cherokee" into year/make/model
+            const ymm = (sc.vehicleYearMakeModel || "").trim();
+            const parts = ymm.split(/\s+/);
+            const yearMatch = parts[0]?.match(/^(19|20)\d{2}$/);
+            vehicles.push({
+              id: `v-${sc.openPhoneId || sc.id}`,
+              year: yearMatch ? parts[0] : "",
+              make: yearMatch ? (parts[1] || "") : (parts[0] || ""),
+              model: yearMatch ? parts.slice(2).join(" ") : parts.slice(1).join(" "),
+              vin: sc.vin || "",
+              keyCode: sc.keyCode || undefined,
+              dealerComparison: sc.dealerComparison || undefined,
+              partNumber: sc.partNumber || undefined,
+            });
+          }
+          return {
+            id: `op-${sc.openPhoneId || sc.id}`,
+            firstName: sc.firstName || "",
+            lastName: sc.lastName || "",
+            phone: sc.phone || "",
+            email: sc.email || "",
+            company: sc.company || "",
+            notes: "",
+            tags: [],
+            address: sc.address ? { street: sc.address, city: "", state: "", zip: "" } : undefined,
+            vehicles,
+            createdAt: sc.createdAt || new Date().toISOString(),
+            updatedAt: sc.updatedAt || new Date().toISOString(),
+            openPhoneContactId: sc.openPhoneId || undefined,
+          } as Customer;
+        });
+
+        dispatch({ type: "SYNC_CONTACTS", payload: mapped });
+      } catch {
+        // Silently fail — server may not be available
+      }
+    };
+
+    // First poll after 5 seconds (let local data load first)
+    const initialTimer = setTimeout(pollServerContacts, 5000);
+    // Then poll every 30 seconds
+    const interval = setInterval(pollServerContacts, 30000);
+
+    return () => {
+      active = false;
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Persist on changes
   useEffect(() => { if (!state.loading) saveCustomers(state.customers); }, [state.customers, state.loading]);
