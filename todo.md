@@ -101,3 +101,6 @@
 - [x] Add long-press on phone/text buttons to open OpenPhone app for that contact
 - [x] Fix customer sort to match OpenPhone order (most recent inbound contact at top using lastActivityAt)
 - [x] Fix missing contacts by also syncing from OpenPhone Conversations API (not just saved contacts)
+- [x] Fix oversized "Customers" title on customer list screen
+- [x] Fix blank/unlabeled filter chips (status, route, area)
+- [x] Fix contact names showing vehicle/phone info instead of person name

@@ -196,7 +196,16 @@ export default function CustomersScreen() {
 
   const renderCustomer = useCallback(
     ({ item }: { item: Customer }) => {
-      const initials = getInitials(item.firstName, item.lastName);
+      // Build display name with fallbacks
+      const hasRealName = item.firstName.trim() || item.lastName.trim();
+      let displayName = `${item.firstName} ${item.lastName}`.trim();
+      if (!hasRealName) {
+        // Fallback: use company, then phone
+        displayName = item.company || formatPhone(item.phone) || "Unknown";
+      }
+      const initials = hasRealName
+        ? getInitials(item.firstName, item.lastName)
+        : displayName.charAt(0).toUpperCase() || "?";
       return (
         <Pressable
           onPress={() => router.push(`/customer/${item.id}` as any)}
@@ -206,13 +215,13 @@ export default function CustomersScreen() {
             pressed && { opacity: 0.7 },
           ]}
         >
-          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+          <View style={[styles.avatar, { backgroundColor: hasRealName ? colors.primary : colors.muted }]}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <View style={styles.cardContent}>
             <View style={styles.nameRow}>
               <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
-                {item.firstName} {item.lastName}
+                {displayName}
               </Text>
               {item.status && item.status !== "none" ? (
                 <View style={[
@@ -283,7 +292,7 @@ export default function CustomersScreen() {
         </Pressable>
       );
     },
-    [colors, router]
+    [colors, router, search, getMatchingVehicle]
   );
 
   const keyExtractor = useCallback((item: Customer) => item.id, []);
@@ -555,7 +564,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   title: {
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: "700",
     letterSpacing: 0.37,
   },
@@ -714,13 +723,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 20,
+    minHeight: 34,
+    justifyContent: "center" as const,
   },
   chipText: {
     fontSize: 13,
     fontWeight: "500",
+    lineHeight: 18,
   },
   nameRow: {
     flexDirection: "row",
