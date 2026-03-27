@@ -315,13 +315,204 @@ export async function getSyncStatus() {
 }
 
 /**
+ * Fetch all conversations from OpenPhone API with pagination.
+ * This captures everyone who has texted/called, even if not saved as a contact.
+ */
+async function fetchAllConversations(apiKey: string): Promise<any[]> {
+  const allConversations: any[] = [];
+  let nextPageToken: string | undefined;
+  let pageCount = 0;
+  const MAX_PAGES = 500; // Up to 50,000 conversations
+
+  do {
+    let url = `${BASE_URL}/conversations?maxResults=100`;
+    if (nextPageToken) {
+      url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
+    }
+
+    const response = await fetch(url, {
+      headers: { Authorization: apiKey, "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      console.error(`[OpenPhone Sync] Conversations API error: ${response.status}`);
+      return allConversations;
+    }
+
+    const data = await response.json();
+    allConversations.push(...(data.data || []));
+    nextPageToken = data.nextPageToken;
+    pageCount++;
+  } while (nextPageToken && pageCount < MAX_PAGES);
+
+  return allConversations;
+}
+
+/**
+ * Sync conversation participants into the contacts table.
+ * For each conversation, if the participant phone number doesn't match
+ * any existing contact, create a new contact entry.
+ */
+async function syncConversationParticipants(): Promise<{ added: number }> {
+  const apiKey = await getOpenPhoneApiKey();
+  if (!apiKey) return { added: 0 };
+
+  const db = await getDb();
+  if (!db) return { added: 0 };
+
+  console.log("[OpenPhone Sync] Fetching conversations for participant discovery...");
+  const conversations = await fetchAllConversations(apiKey);
+  console.log(`[OpenPhone Sync] Fetched ${conversations.length} conversations`);
+
+  // Get all existing contact phone numbers for fast lookup
+  const existingContacts = await db.select({ phone: contacts.phone, openPhoneId: contacts.openPhoneId }).from(contacts);
+  const existingPhones = new Set<string>();
+  const existingOpenPhoneIds = new Set<string>();
+  for (const c of existingContacts) {
+    if (c.phone) {
+      // Normalize: strip everything except digits, keep last 10
+      const digits = c.phone.replace(/\D/g, "").slice(-10);
+      if (digits.length >= 7) existingPhones.add(digits);
+    }
+    if (c.openPhoneId) existingOpenPhoneIds.add(c.openPhoneId);
+  }
+
+  let added = 0;
+
+  for (const conv of conversations) {
+    const participants: string[] = conv.participants || [];
+    const convName = conv.name || "";
+    const lastActivityAt = conv.lastActivityAt ? new Date(conv.lastActivityAt) : null;
+    const convId = conv.id || "";
+
+    for (const participant of participants) {
+      // participant is a phone number in E.164 format
+      const digits = participant.replace(/\D/g, "").slice(-10);
+      if (digits.length < 7) continue;
+
+      // Skip if we already have this phone number
+      if (existingPhones.has(digits)) {
+        // But update lastActivityAt if the conversation is more recent
+        // We'll handle this via the contacts sync which already has lastActivityAt
+        continue;
+      }
+
+      // New participant — create a contact from conversation data
+      const openPhoneId = `conv-${convId}-${digits}`;
+      if (existingOpenPhoneIds.has(openPhoneId)) continue;
+
+      // Parse name from conversation name if available
+      let firstName = "";
+      let lastName = "";
+      if (convName && convName !== participant) {
+        const parsed = parseNameFromCompany(convName);
+        firstName = parsed.firstName;
+        lastName = parsed.lastName;
+        // If parsing didn't work, use the whole name as firstName
+        if (!firstName && !lastName) {
+          const nameParts = convName.trim().split(/\s+/);
+          firstName = nameParts[0] || "";
+          lastName = nameParts.slice(1).join(" ");
+        }
+      }
+
+      try {
+        await db.insert(contacts).values({
+          openPhoneId,
+          firstName: firstName || null,
+          lastName: lastName || null,
+          phone: participant,
+          email: null,
+          company: convName || null,
+          vehicleYearMakeModel: null,
+          vin: null,
+          keyCode: null,
+          dealerComparison: null,
+          partNumber: null,
+          address: null,
+          route: null,
+          lastActivityAt,
+          rawJson: JSON.stringify(conv),
+        });
+        added++;
+        existingPhones.add(digits);
+        existingOpenPhoneIds.add(openPhoneId);
+      } catch (err) {
+        // Likely duplicate — skip
+      }
+    }
+  }
+
+  console.log(`[OpenPhone Sync] Conversation participants: ${added} new contacts added`);
+  return { added };
+}
+
+/**
+ * Update lastActivityAt for existing contacts from conversation data.
+ * This ensures the sort order matches OpenPhone even for contacts
+ * that don't have lastActivityAt from the contacts API.
+ */
+async function updateActivityFromConversations(): Promise<void> {
+  const apiKey = await getOpenPhoneApiKey();
+  if (!apiKey) return;
+
+  const db = await getDb();
+  if (!db) return;
+
+  const conversations = await fetchAllConversations(apiKey);
+
+  // Build a map: normalized phone -> most recent lastActivityAt
+  const phoneActivityMap = new Map<string, Date>();
+  for (const conv of conversations) {
+    const lastActivity = conv.lastActivityAt ? new Date(conv.lastActivityAt) : null;
+    if (!lastActivity) continue;
+
+    for (const participant of (conv.participants || [])) {
+      const digits = participant.replace(/\D/g, "").slice(-10);
+      if (digits.length < 7) continue;
+
+      const existing = phoneActivityMap.get(digits);
+      if (!existing || lastActivity > existing) {
+        phoneActivityMap.set(digits, lastActivity);
+      }
+    }
+  }
+
+  // Update contacts that have no lastActivityAt or an older one
+  const allContacts = await db.select().from(contacts);
+  let updatedCount = 0;
+
+  for (const c of allContacts) {
+    if (!c.phone) continue;
+    const digits = c.phone.replace(/\D/g, "").slice(-10);
+    const convActivity = phoneActivityMap.get(digits);
+    if (!convActivity) continue;
+
+    // Update if no existing activity or conversation is more recent
+    if (!c.lastActivityAt || convActivity > c.lastActivityAt) {
+      await db
+        .update(contacts)
+        .set({ lastActivityAt: convActivity })
+        .where(eq(contacts.id, c.id));
+      updatedCount++;
+    }
+  }
+
+  if (updatedCount > 0) {
+    console.log(`[OpenPhone Sync] Updated lastActivityAt for ${updatedCount} contacts from conversations`);
+  }
+}
+
+/**
  * Run a single sync and record the timestamp.
  */
 async function runSync() {
   try {
     const result = await syncContacts();
+    // Also sync conversation participants to catch people not saved as contacts
+    const convResult = await syncConversationParticipants();
     const db = await getDb();
-    if (db && result.total > 0) {
+    if (db && (result.total > 0 || convResult.added > 0)) {
       const now = new Date().toISOString();
       await db
         .insert(appSettings)
