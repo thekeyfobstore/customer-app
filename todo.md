@@ -54,3 +54,7 @@
 - [x] Add "Start Route" button to open optimized route in Apple/Google Maps
 - [x] Add estimated drive times between stops
 - [x] Fix Clover API validation rejecting valid credentials (UUID token + numeric merchant ID)
+- [ ] Fix "Could not load bundle" error in Expo Go
+- [ ] Fix Clover validation still showing old error message (Settings screen not using updated code)
+- [ ] Test Clover API credentials directly from server
+- [ ] Add search bar to Customers tab to find customers by name or phone number
