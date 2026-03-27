@@ -303,11 +303,8 @@ export default function CustomerDetailScreen() {
                     <Text style={[styles.vehicleTitle, { color: colors.foreground }]}>
                       {v.year} {v.make} {v.model}
                     </Text>
-                    <Text style={[styles.vehicleDetail, { color: colors.muted }]}>
-                      {[v.color, v.licensePlate].filter(Boolean).join(" · ") || "No details"}
-                    </Text>
                     {v.vin ? (
-                      <Text style={[styles.vehicleVin, { color: colors.muted }]}>VIN: {v.vin}</Text>
+                      <Text style={[styles.vehicleDetail, { color: colors.muted }]}>VIN: {v.vin}</Text>
                     ) : null}
                   </View>
                   <View style={styles.vehicleActions}>

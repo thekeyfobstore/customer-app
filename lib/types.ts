@@ -3,9 +3,7 @@ export interface Vehicle {
   year: string;
   make: string;
   model: string;
-  color: string;
   vin: string;
-  licensePlate: string;
 }
 
 export interface Address {

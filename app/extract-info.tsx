@@ -86,9 +86,7 @@ export default function ExtractInfoScreen() {
             year: v.year || "",
             make: v.make || "",
             model: v.model || "",
-            color: v.color || "",
             vin: v.vin || "",
-            licensePlate: v.licensePlate || "",
           }))
         );
       }
@@ -293,11 +291,8 @@ export default function ExtractInfoScreen() {
                     <Text style={[styles.vehicleTitle, { color: colors.foreground }]}>
                       {[v.year, v.make, v.model].filter(Boolean).join(" ") || "Unknown Vehicle"}
                     </Text>
-                    <Text style={[styles.vehicleDetail, { color: colors.muted }]}>
-                      {[v.color, v.licensePlate].filter(Boolean).join(" · ") || "No additional details"}
-                    </Text>
                     {v.vin ? (
-                      <Text style={[styles.vehicleVin, { color: colors.muted }]}>VIN: {v.vin}</Text>
+                      <Text style={[styles.vehicleDetail, { color: colors.muted }]}>VIN: {v.vin}</Text>
                     ) : null}
                   </View>
                   <Pressable

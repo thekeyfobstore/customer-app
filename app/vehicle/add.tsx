@@ -25,9 +25,7 @@ export default function AddVehicleScreen() {
   const [year, setYear] = useState("");
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
-  const [color, setColor] = useState("");
   const [vin, setVin] = useState("");
-  const [licensePlate, setLicensePlate] = useState("");
 
   const handleSave = () => {
     if (!make.trim() && !model.trim()) {
@@ -46,9 +44,7 @@ export default function AddVehicleScreen() {
       year: year.trim(),
       make: make.trim(),
       model: model.trim(),
-      color: color.trim(),
       vin: vin.trim().toUpperCase(),
-      licensePlate: licensePlate.trim().toUpperCase(),
     };
 
     updateCustomer({
@@ -105,35 +101,19 @@ export default function AddVehicleScreen() {
             onChangeText={setModel}
             returnKeyType="next"
           />
-          <TextInput
-            style={[styles.input, { color: colors.foreground }]}
-            placeholder="Color (e.g., Silver)"
-            placeholderTextColor={colors.muted}
-            value={color}
-            onChangeText={setColor}
-            returnKeyType="next"
-          />
         </View>
 
         <Text style={[styles.label, { color: colors.muted }]}>IDENTIFICATION</Text>
         <View style={[styles.fieldGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <TextInput
-            style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
+            style={[styles.input, { color: colors.foreground }]}
             placeholder="VIN (optional)"
             placeholderTextColor={colors.muted}
             value={vin}
             onChangeText={setVin}
             autoCapitalize="characters"
-            returnKeyType="next"
-          />
-          <TextInput
-            style={[styles.input, { color: colors.foreground }]}
-            placeholder="License Plate (optional)"
-            placeholderTextColor={colors.muted}
-            value={licensePlate}
-            onChangeText={setLicensePlate}
-            autoCapitalize="characters"
             returnKeyType="done"
+            onSubmitEditing={handleSave}
           />
         </View>
       </ScrollView>

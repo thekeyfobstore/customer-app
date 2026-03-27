@@ -44,9 +44,7 @@ export default function CustomersScreen() {
             v.year.toLowerCase().includes(q) ||
             v.make.toLowerCase().includes(q) ||
             v.model.toLowerCase().includes(q) ||
-            v.color.toLowerCase().includes(q) ||
             v.vin.toLowerCase().includes(q) ||
-            v.licensePlate.toLowerCase().includes(q) ||
             `${v.year} ${v.make} ${v.model}`.toLowerCase().includes(q) ||
             `${v.make} ${v.model}`.toLowerCase().includes(q)
         );
@@ -65,18 +63,13 @@ export default function CustomersScreen() {
           v.year.toLowerCase().includes(q) ||
           v.make.toLowerCase().includes(q) ||
           v.model.toLowerCase().includes(q) ||
-          v.color.toLowerCase().includes(q) ||
           v.vin.toLowerCase().includes(q) ||
-          v.licensePlate.toLowerCase().includes(q) ||
           `${v.year} ${v.make} ${v.model}`.toLowerCase().includes(q) ||
           `${v.make} ${v.model}`.toLowerCase().includes(q)
       );
       if (!match) return null;
-      const parts = [match.year, match.color, match.make, match.model].filter(Boolean);
+      const parts = [match.year, match.make, match.model].filter(Boolean);
       const label = parts.join(" ");
-      if (match.licensePlate && match.licensePlate.toLowerCase().includes(q)) {
-        return `${label} (${match.licensePlate})`;
-      }
       if (match.vin && match.vin.toLowerCase().includes(q)) {
         return `${label} (VIN: ...${match.vin.slice(-6)})`;
       }

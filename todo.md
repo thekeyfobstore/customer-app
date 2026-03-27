@@ -60,3 +60,4 @@
 - [x] Add search bar to Customers tab to find customers by name or phone number
 - [x] Fix OpenPhone import — contacts importing as blank entries, only showing 10 when there are thousands
 - [x] Add vehicle search to Customers tab (search by year, make, model, color, VIN, license plate)
+- [x] Remove license plate and color from vehicle fields — keep only Year, Make, Model, VIN

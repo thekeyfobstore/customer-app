@@ -91,9 +91,7 @@ describe("Type definitions", () => {
       year: "2023",
       make: "Toyota",
       model: "Camry",
-      color: "Silver",
       vin: "1HGCM82633A123456",
-      licensePlate: "ABC1234",
     };
     expect(vehicle.make).toBe("Toyota");
     expect(vehicle.vin).toBe("1HGCM82633A123456");
@@ -125,9 +123,7 @@ describe("Type definitions", () => {
           year: "2023",
           make: "Honda",
           model: "Civic",
-          color: "Blue",
           vin: "",
-          licensePlate: "XYZ789",
         },
       ],
       address: {
@@ -165,9 +161,7 @@ describe("Type definitions", () => {
           year: "2022",
           make: "Ford",
           model: "F-150",
-          color: "Red",
           vin: "",
-          licensePlate: "",
         },
       ],
     };
