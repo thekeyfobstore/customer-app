@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   Text,
   View,
@@ -7,12 +7,16 @@ import {
   Pressable,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useData } from "@/lib/data-context";
 import { generateId } from "@/lib/helpers";
+import { loadApiKey } from "@/lib/storage";
+import { createOpenPhoneContact } from "@/lib/openphone";
 import type { Customer } from "@/lib/types";
 
 export default function AddCustomerScreen() {
@@ -27,14 +31,23 @@ export default function AddCustomerScreen() {
   const [company, setCompany] = useState("");
   const [notes, setNotes] = useState("");
   const [tagsText, setTagsText] = useState("");
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zip, setZip] = useState("");
+  const [syncToOpenPhone, setSyncToOpenPhone] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = useCallback(async () => {
     if (!firstName.trim() && !lastName.trim()) {
       Alert.alert("Required", "Please enter at least a first or last name.");
       return;
     }
 
+    setSaving(true);
     const now = new Date().toISOString();
+    const hasAddress = street.trim() || city.trim() || state.trim() || zip.trim();
+
     const customer: Customer = {
       id: generateId(),
       firstName: firstName.trim(),
@@ -43,37 +56,58 @@ export default function AddCustomerScreen() {
       email: email.trim(),
       company: company.trim(),
       notes: notes.trim(),
-      tags: tagsText
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
+      tags: tagsText.split(",").map((t) => t.trim()).filter(Boolean),
+      vehicles: [],
+      address: hasAddress
+        ? { street: street.trim(), city: city.trim(), state: state.trim(), zip: zip.trim() }
+        : undefined,
       createdAt: now,
       updatedAt: now,
     };
 
+    // Sync to OpenPhone if enabled
+    if (syncToOpenPhone && phone.trim()) {
+      try {
+        const apiKey = await loadApiKey();
+        if (apiKey) {
+          const opId = await createOpenPhoneContact(apiKey, {
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+            phone: customer.phone,
+            email: customer.email,
+            company: customer.company,
+          });
+          if (opId) customer.openPhoneContactId = opId;
+        }
+      } catch {
+        // Continue even if OpenPhone sync fails
+      }
+    }
+
     addCustomer(customer);
+    setSaving(false);
     router.back();
-  };
+  }, [firstName, lastName, phone, email, company, notes, tagsText, street, city, state, zip, syncToOpenPhone, addCustomer, router]);
 
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]}>
       <View style={styles.navBar}>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [pressed && { opacity: 0.6 }]}
-        >
+        <Pressable onPress={() => router.back()} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
           <Text style={[styles.cancelText, { color: colors.primary }]}>Cancel</Text>
         </Pressable>
         <Text style={[styles.navTitle, { color: colors.foreground }]}>New Customer</Text>
-        <Pressable
-          onPress={handleSave}
-          style={({ pressed }) => [pressed && { opacity: 0.6 }]}
-        >
-          <Text style={[styles.saveText, { color: colors.primary }]}>Save</Text>
+        <Pressable onPress={handleSave} disabled={saving} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
+          {saving ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Text style={[styles.saveText, { color: colors.primary }]}>Save</Text>
+          )}
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.form} showsVerticalScrollIndicator={false}>
+        {/* Name */}
+        <Text style={[styles.label, { color: colors.muted }]}>NAME</Text>
         <View style={[styles.fieldGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <TextInput
             style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
@@ -85,7 +119,7 @@ export default function AddCustomerScreen() {
             autoFocus
           />
           <TextInput
-            style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
+            style={[styles.input, { color: colors.foreground }]}
             placeholder="Last Name"
             placeholderTextColor={colors.muted}
             value={lastName}
@@ -94,6 +128,8 @@ export default function AddCustomerScreen() {
           />
         </View>
 
+        {/* Contact */}
+        <Text style={[styles.label, { color: colors.muted }]}>CONTACT</Text>
         <View style={[styles.fieldGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <TextInput
             style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
@@ -124,6 +160,48 @@ export default function AddCustomerScreen() {
           />
         </View>
 
+        {/* Address */}
+        <Text style={[styles.label, { color: colors.muted }]}>ADDRESS</Text>
+        <View style={[styles.fieldGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <TextInput
+            style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
+            placeholder="Street Address"
+            placeholderTextColor={colors.muted}
+            value={street}
+            onChangeText={setStreet}
+            returnKeyType="next"
+          />
+          <TextInput
+            style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
+            placeholder="City"
+            placeholderTextColor={colors.muted}
+            value={city}
+            onChangeText={setCity}
+            returnKeyType="next"
+          />
+          <View style={styles.row}>
+            <TextInput
+              style={[styles.input, styles.halfInput, { color: colors.foreground, borderBottomColor: colors.border, borderRightWidth: 0.5, borderRightColor: colors.border }]}
+              placeholder="State"
+              placeholderTextColor={colors.muted}
+              value={state}
+              onChangeText={setState}
+              returnKeyType="next"
+            />
+            <TextInput
+              style={[styles.input, styles.halfInput, { color: colors.foreground }]}
+              placeholder="ZIP Code"
+              placeholderTextColor={colors.muted}
+              value={zip}
+              onChangeText={setZip}
+              keyboardType="number-pad"
+              returnKeyType="next"
+            />
+          </View>
+        </View>
+
+        {/* Notes & Tags */}
+        <Text style={[styles.label, { color: colors.muted }]}>OTHER</Text>
         <View style={[styles.fieldGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <TextInput
             style={[styles.input, styles.multilineInput, { color: colors.foreground, borderBottomColor: colors.border }]}
@@ -143,48 +221,43 @@ export default function AddCustomerScreen() {
             returnKeyType="done"
           />
         </View>
+
+        {/* OpenPhone Sync Toggle */}
+        <Pressable
+          onPress={() => setSyncToOpenPhone(!syncToOpenPhone)}
+          style={({ pressed }) => [
+            styles.toggleRow,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+            pressed && { opacity: 0.7 },
+          ]}
+        >
+          <IconSymbol name="phone.fill" size={18} color={colors.primary} />
+          <Text style={[styles.toggleText, { color: colors.foreground }]}>
+            Also create in OpenPhone
+          </Text>
+          <View style={[styles.toggle, { backgroundColor: syncToOpenPhone ? colors.primary : colors.muted + "40" }]}>
+            <View style={[styles.toggleKnob, { transform: [{ translateX: syncToOpenPhone ? 18 : 2 }] }]} />
+          </View>
+        </Pressable>
       </ScrollView>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  navBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  navTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-  },
-  cancelText: {
-    fontSize: 17,
-  },
-  saveText: {
-    fontSize: 17,
-    fontWeight: "600",
-  },
-  form: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    gap: 24,
-  },
-  fieldGroup: {
-    borderRadius: 14,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  input: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    borderBottomWidth: 0.5,
-  },
-  multilineInput: {
-    minHeight: 80,
-    textAlignVertical: "top",
-  },
+  navBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12 },
+  navTitle: { fontSize: 17, fontWeight: "600" },
+  cancelText: { fontSize: 17 },
+  saveText: { fontSize: 17, fontWeight: "600" },
+  form: { paddingHorizontal: 20, paddingBottom: 40, gap: 4 },
+  label: { fontSize: 13, fontWeight: "600", letterSpacing: 0.5, marginTop: 16, marginBottom: 8, marginLeft: 4 },
+  fieldGroup: { borderRadius: 14, borderWidth: 1, overflow: "hidden" },
+  input: { paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, borderBottomWidth: 0.5 },
+  multilineInput: { minHeight: 80, textAlignVertical: "top" },
+  row: { flexDirection: "row" },
+  halfInput: { flex: 1, borderBottomWidth: 0 },
+  toggleRow: { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 14, borderWidth: 1, gap: 12, marginTop: 16 },
+  toggleText: { flex: 1, fontSize: 16, fontWeight: "500" },
+  toggle: { width: 44, height: 28, borderRadius: 14, justifyContent: "center" },
+  toggleKnob: { width: 24, height: 24, borderRadius: 12, backgroundColor: "#FFFFFF" },
 });

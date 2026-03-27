@@ -97,6 +97,8 @@ export default function RootLayout() {
               <Stack.Screen name="appointment/add" options={{ presentation: "modal" }} />
               <Stack.Screen name="appointment/edit" options={{ presentation: "modal" }} />
               <Stack.Screen name="import-contacts" options={{ presentation: "modal" }} />
+              <Stack.Screen name="vehicle/add" options={{ presentation: "modal" }} />
+              <Stack.Screen name="extract-info" options={{ presentation: "modal" }} />
             </Stack>
           </DataProvider>
           <StatusBar style="auto" />

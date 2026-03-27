@@ -28,6 +28,10 @@ export default function EditCustomerScreen() {
   const [company, setCompany] = useState("");
   const [notes, setNotes] = useState("");
   const [tagsText, setTagsText] = useState("");
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zip, setZip] = useState("");
 
   useEffect(() => {
     if (customer) {
@@ -38,6 +42,12 @@ export default function EditCustomerScreen() {
       setCompany(customer.company);
       setNotes(customer.notes);
       setTagsText(customer.tags.join(", "));
+      if (customer.address) {
+        setStreet(customer.address.street || "");
+        setCity(customer.address.city || "");
+        setState(customer.address.state || "");
+        setZip(customer.address.zip || "");
+      }
     }
   }, [customer]);
 
@@ -48,6 +58,8 @@ export default function EditCustomerScreen() {
     }
     if (!customer) return;
 
+    const hasAddress = street.trim() || city.trim() || state.trim() || zip.trim();
+
     updateCustomer({
       ...customer,
       firstName: firstName.trim(),
@@ -56,10 +68,10 @@ export default function EditCustomerScreen() {
       email: email.trim(),
       company: company.trim(),
       notes: notes.trim(),
-      tags: tagsText
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
+      tags: tagsText.split(",").map((t) => t.trim()).filter(Boolean),
+      address: hasAddress
+        ? { street: street.trim(), city: city.trim(), state: state.trim(), zip: zip.trim() }
+        : customer.address,
       updatedAt: new Date().toISOString(),
     });
     router.back();
@@ -76,22 +88,18 @@ export default function EditCustomerScreen() {
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]}>
       <View style={styles.navBar}>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [pressed && { opacity: 0.6 }]}
-        >
+        <Pressable onPress={() => router.back()} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
           <Text style={[styles.cancelText, { color: colors.primary }]}>Cancel</Text>
         </Pressable>
         <Text style={[styles.navTitle, { color: colors.foreground }]}>Edit Customer</Text>
-        <Pressable
-          onPress={handleSave}
-          style={({ pressed }) => [pressed && { opacity: 0.6 }]}
-        >
+        <Pressable onPress={handleSave} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
           <Text style={[styles.saveText, { color: colors.primary }]}>Save</Text>
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.form} showsVerticalScrollIndicator={false}>
+        {/* Name */}
+        <Text style={[styles.label, { color: colors.muted }]}>NAME</Text>
         <View style={[styles.fieldGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <TextInput
             style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
@@ -111,6 +119,8 @@ export default function EditCustomerScreen() {
           />
         </View>
 
+        {/* Contact */}
+        <Text style={[styles.label, { color: colors.muted }]}>CONTACT</Text>
         <View style={[styles.fieldGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <TextInput
             style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
@@ -141,6 +151,48 @@ export default function EditCustomerScreen() {
           />
         </View>
 
+        {/* Address */}
+        <Text style={[styles.label, { color: colors.muted }]}>ADDRESS</Text>
+        <View style={[styles.fieldGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <TextInput
+            style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
+            placeholder="Street Address"
+            placeholderTextColor={colors.muted}
+            value={street}
+            onChangeText={setStreet}
+            returnKeyType="next"
+          />
+          <TextInput
+            style={[styles.input, { color: colors.foreground, borderBottomColor: colors.border }]}
+            placeholder="City"
+            placeholderTextColor={colors.muted}
+            value={city}
+            onChangeText={setCity}
+            returnKeyType="next"
+          />
+          <View style={styles.row}>
+            <TextInput
+              style={[styles.input, styles.halfInput, { color: colors.foreground, borderRightWidth: 0.5, borderRightColor: colors.border }]}
+              placeholder="State"
+              placeholderTextColor={colors.muted}
+              value={state}
+              onChangeText={setState}
+              returnKeyType="next"
+            />
+            <TextInput
+              style={[styles.input, styles.halfInput, { color: colors.foreground }]}
+              placeholder="ZIP Code"
+              placeholderTextColor={colors.muted}
+              value={zip}
+              onChangeText={setZip}
+              keyboardType="number-pad"
+              returnKeyType="next"
+            />
+          </View>
+        </View>
+
+        {/* Notes & Tags */}
+        <Text style={[styles.label, { color: colors.muted }]}>OTHER</Text>
         <View style={[styles.fieldGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <TextInput
             style={[styles.input, styles.multilineInput, { color: colors.foreground, borderBottomColor: colors.border }]}
@@ -166,42 +218,15 @@ export default function EditCustomerScreen() {
 }
 
 const styles = StyleSheet.create({
-  navBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  navTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-  },
-  cancelText: {
-    fontSize: 17,
-  },
-  saveText: {
-    fontSize: 17,
-    fontWeight: "600",
-  },
-  form: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    gap: 24,
-  },
-  fieldGroup: {
-    borderRadius: 14,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  input: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    borderBottomWidth: 0.5,
-  },
-  multilineInput: {
-    minHeight: 80,
-    textAlignVertical: "top",
-  },
+  navBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12 },
+  navTitle: { fontSize: 17, fontWeight: "600" },
+  cancelText: { fontSize: 17 },
+  saveText: { fontSize: 17, fontWeight: "600" },
+  form: { paddingHorizontal: 20, paddingBottom: 40, gap: 4 },
+  label: { fontSize: 13, fontWeight: "600", letterSpacing: 0.5, marginTop: 16, marginBottom: 8, marginLeft: 4 },
+  fieldGroup: { borderRadius: 14, borderWidth: 1, overflow: "hidden" },
+  input: { paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, borderBottomWidth: 0.5 },
+  multilineInput: { minHeight: 80, textAlignVertical: "top" },
+  row: { flexDirection: "row" },
+  halfInput: { flex: 1, borderBottomWidth: 0 },
 });

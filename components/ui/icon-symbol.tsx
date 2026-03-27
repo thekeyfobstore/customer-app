@@ -35,6 +35,11 @@ const MAPPING = {
   "message.fill": "message",
   "exclamationmark.triangle.fill": "warning",
   "info.circle.fill": "info",
+  "car.fill": "directions-car",
+  "mappin": "place",
+  "sparkles": "auto-awesome",
+  "arrow.clockwise": "refresh",
+  "bubble.left.and.bubble.right": "forum",
 } as IconMapping;
 
 export function IconSymbol({

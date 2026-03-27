@@ -67,6 +67,11 @@ export default function CustomersScreen() {
             {item.company ? (
               <Text style={[styles.detail, { color: colors.muted }]}>{item.company}</Text>
             ) : null}
+            {item.vehicles && item.vehicles.length > 0 ? (
+              <Text style={[styles.detail, { color: colors.muted }]}>
+                {item.vehicles.length} vehicle{item.vehicles.length !== 1 ? 's' : ''}
+              </Text>
+            ) : null}
           </View>
           <IconSymbol name="chevron.right" size={18} color={colors.muted} />
         </Pressable>

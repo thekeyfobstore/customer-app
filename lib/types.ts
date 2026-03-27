@@ -1,3 +1,20 @@
+export interface Vehicle {
+  id: string;
+  year: string;
+  make: string;
+  model: string;
+  color: string;
+  vin: string;
+  licensePlate: string;
+}
+
+export interface Address {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+}
+
 export interface Customer {
   id: string;
   firstName: string;
@@ -7,6 +24,8 @@ export interface Customer {
   company: string;
   notes: string;
   tags: string[];
+  address?: Address;
+  vehicles?: Vehicle[];
   createdAt: string;
   updatedAt: string;
   openPhoneContactId?: string;
@@ -45,4 +64,15 @@ export interface OpenPhoneContact {
   emails: { address: string }[];
   company: string;
   selected?: boolean;
+}
+
+/** Data extracted from message history by AI */
+export interface ExtractedInfo {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+  address?: Address;
+  vehicles?: Vehicle[];
+  company?: string;
 }

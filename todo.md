@@ -17,3 +17,14 @@
 - [x] Generate custom app logo
 - [x] Polish UI, empty states, loading indicators
 - [x] Final testing and checkpoint
+- [x] Add Vehicle data model (year, make, model, color, VIN, license plate)
+- [x] Add vehicle management UI on customer profile (add/edit/delete vehicles)
+- [x] Build in-app SMS messaging via OpenPhone API (send/receive messages per customer)
+- [x] Build conversation thread UI on customer detail screen
+- [x] Two-way customer sync: creating a customer in ClientBook also creates in OpenPhone
+- [x] Update Add/Edit Customer forms with vehicle fields
+- [x] Update customer detail screen to show vehicles section
+- [x] Build message info extraction engine (parse names, phones, emails, addresses, vehicles from text)
+- [x] Build extraction review/confirm UI screen
+- [x] Add Address field to customer profile (street, city, state, zip)
+- [x] Auto-fill customer profile from extracted message data

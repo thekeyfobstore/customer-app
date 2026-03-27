@@ -73,6 +73,109 @@ export async function fetchOpenPhoneNumbers(apiKey: string): Promise<any[]> {
   return data.data || [];
 }
 
+/**
+ * Send an SMS message via OpenPhone API
+ */
+export async function sendOpenPhoneMessage(
+  apiKey: string,
+  phoneNumberId: string,
+  to: string,
+  content: string
+): Promise<any> {
+  const response = await fetch(`${BASE_URL}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      content,
+      to: [to],
+      from: phoneNumberId,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to send message (${response.status}): ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Create a contact in OpenPhone
+ */
+export async function createOpenPhoneContact(
+  apiKey: string,
+  customer: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email?: string;
+    company?: string;
+  }
+): Promise<string | null> {
+  try {
+    const body: any = {
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+    };
+    if (customer.phone) {
+      body.phoneNumbers = [{ number: customer.phone }];
+    }
+    if (customer.email) {
+      body.emails = [{ address: customer.email }];
+    }
+    if (customer.company) {
+      body.company = customer.company;
+    }
+
+    const response = await fetch(`${BASE_URL}/contacts`, {
+      method: "POST",
+      headers: {
+        Authorization: apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data.data?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch messages for a specific conversation (by phone number)
+ */
+export async function fetchConversationMessages(
+  apiKey: string,
+  phoneNumberId: string,
+  participantPhone: string
+): Promise<any[]> {
+  const url = `${BASE_URL}/messages?phoneNumberId=${phoneNumberId}&participants=${encodeURIComponent(participantPhone)}&maxResults=50`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: apiKey,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = await response.json();
+  return data.data || [];
+}
+
 export function convertToCustomers(contacts: OpenPhoneContact[]): Customer[] {
   const now = new Date().toISOString();
   return contacts
@@ -86,6 +189,7 @@ export function convertToCustomers(contacts: OpenPhoneContact[]): Customer[] {
       company: c.company || "",
       notes: "",
       tags: [],
+      vehicles: [],
       createdAt: now,
       updatedAt: now,
       openPhoneContactId: c.id,
@@ -106,7 +210,7 @@ export function convertToMessages(
       return {
         id: m.id || generateId(),
         customerId: customerMap.get(phone) || "",
-        body: m.body || m.text || "",
+        body: m.body || m.text || m.content || "",
         direction: m.direction === "inbound" ? ("inbound" as const) : ("outbound" as const),
         createdAt: m.createdAt || new Date().toISOString(),
         from: m.from || "",
