@@ -14,18 +14,26 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useData } from "@/lib/data-context";
 import { getInitials, formatPhone } from "@/lib/helpers";
-import type { Customer } from "@/lib/types";
+import type { Customer, CustomerStatus } from "@/lib/types";
+import { CUSTOMER_STATUS_LABELS, CUSTOMER_STATUS_COLORS } from "@/lib/types";
+import { Linking, ScrollView } from "react-native";
 
 export default function CustomersScreen() {
   const colors = useColors();
   const router = useRouter();
   const { customers, loading } = useData();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<CustomerStatus | "all">("all");
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return customers;
+    let result = customers;
+    // Status filter
+    if (statusFilter !== "all") {
+      result = result.filter((c) => (c.status || "none") === statusFilter);
+    }
+    if (!search.trim()) return result;
     const q = search.toLowerCase();
-    return customers.filter((c) => {
+    return result.filter((c) => {
       // Search name, phone, company, email
       if (
         c.firstName.toLowerCase().includes(q) ||
@@ -54,7 +62,7 @@ export default function CustomersScreen() {
       }
       return false;
     });
-  }, [customers, search]);
+  }, [customers, search, statusFilter]);
 
   // Helper to find matching vehicle for search highlight
   const getMatchingVehicle = useCallback(
@@ -111,16 +119,29 @@ export default function CustomersScreen() {
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <View style={styles.cardContent}>
-            <Text style={[styles.name, { color: colors.foreground }]}>
-              {item.firstName} {item.lastName}
-            </Text>
+            <View style={styles.nameRow}>
+              <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
+                {item.firstName} {item.lastName}
+              </Text>
+              {item.status && item.status !== "none" ? (
+                <View style={[
+                  styles.statusChip,
+                  { backgroundColor: CUSTOMER_STATUS_COLORS[item.status].bg },
+                ]}>
+                  <Text style={[
+                    styles.statusChipText,
+                    { color: CUSTOMER_STATUS_COLORS[item.status].text },
+                  ]}>{CUSTOMER_STATUS_LABELS[item.status]}</Text>
+                </View>
+              ) : null}
+            </View>
             {item.phone ? (
               <Text style={[styles.detail, { color: colors.muted }]}>
                 {formatPhone(item.phone)}
               </Text>
             ) : null}
             {item.company ? (
-              <Text style={[styles.detail, { color: colors.muted }]}>{item.company}</Text>
+              <Text style={[styles.detail, { color: colors.muted }]} numberOfLines={1}>{item.company}</Text>
             ) : null}
             {(() => {
               const matchedVehicle = getMatchingVehicle(item);
@@ -144,7 +165,24 @@ export default function CustomersScreen() {
               return null;
             })()}
           </View>
-          <IconSymbol name="chevron.right" size={18} color={colors.muted} />
+          <View style={styles.cardActions}>
+            {item.openPhoneContactId ? (
+              <Pressable
+                onPress={() => {
+                  const url = `https://app.openphone.com/contacts/${item.openPhoneContactId}`;
+                  Linking.openURL(url).catch(() => {});
+                }}
+                style={({ pressed }) => [
+                  styles.openPhoneIcon,
+                  { backgroundColor: colors.primary + "15" },
+                  pressed && { opacity: 0.6 },
+                ]}
+              >
+                <IconSymbol name="message.fill" size={16} color={colors.primary} />
+              </Pressable>
+            ) : null}
+            <IconSymbol name="chevron.right" size={18} color={colors.muted} />
+          </View>
         </Pressable>
       );
     },
@@ -186,6 +224,54 @@ export default function CustomersScreen() {
           </Pressable>
         ) : null}
       </View>
+
+      {/* Status Filter Chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterChips}
+      >
+        <Pressable
+          onPress={() => setStatusFilter("all")}
+          style={({ pressed }) => [
+            styles.chip,
+            statusFilter === "all"
+              ? { backgroundColor: colors.primary }
+              : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+            pressed && { opacity: 0.7 },
+          ]}
+        >
+          <Text style={[
+            styles.chipText,
+            { color: statusFilter === "all" ? "#FFFFFF" : colors.foreground },
+          ]}>All ({customers.length})</Text>
+        </Pressable>
+        {(["need-price-part", "quote-sent", "book-later", "booked-needs-confirmation", "confirmed", "rejected", "none"] as CustomerStatus[]).map((s) => {
+          const count = customers.filter((c) => (c.status || "none") === s).length;
+          if (count === 0) return null;
+          const sc = CUSTOMER_STATUS_COLORS[s];
+          const isActive = statusFilter === s;
+          return (
+            <Pressable
+              key={s}
+              onPress={() => setStatusFilter(isActive ? "all" : s)}
+              style={({ pressed }) => [
+                styles.chip,
+                isActive
+                  ? { backgroundColor: sc.bg, borderColor: sc.text, borderWidth: 1.5 }
+                  : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Text style={[
+                styles.chipText,
+                { color: isActive ? sc.text : colors.muted },
+                isActive && { fontWeight: "700" },
+              ]}>{CUSTOMER_STATUS_LABELS[s]} ({count})</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       {sorted.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -422,5 +508,46 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  filterChips: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  statusChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  statusChipText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  cardActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  openPhoneIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

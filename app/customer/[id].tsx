@@ -30,7 +30,10 @@ import {
   fetchOpenPhoneNumbers,
   fetchConversationMessages,
 } from "@/lib/openphone";
-import type { Vehicle, Message } from "@/lib/types";
+import type { Vehicle, Message, CustomerStatus } from "@/lib/types";
+import { CUSTOMER_STATUS_LABELS, CUSTOMER_STATUS_COLORS } from "@/lib/types";
+import { Linking } from "react-native";
+import * as Haptics from "expo-haptics";
 
 type Tab = "info" | "messages" | "appointments";
 
@@ -57,6 +60,7 @@ export default function CustomerDetailScreen() {
   const [apiKey, setApiKey] = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [refreshingMessages, setRefreshingMessages] = useState(false);
+  const [showStatusPicker, setShowStatusPicker] = useState(false);
 
   useEffect(() => {
     loadApiKey().then((key) => {
@@ -221,6 +225,128 @@ export default function CustomerDetailScreen() {
           <Text style={[styles.profileCompany, { color: colors.muted }]}>{customer.company}</Text>
         ) : null}
       </View>
+
+      {/* Status Badge - Tap to change */}
+      <Pressable
+        onPress={() => {
+          if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setShowStatusPicker(!showStatusPicker);
+        }}
+        style={({ pressed }) => [
+          styles.statusBadgeRow,
+          pressed && { opacity: 0.8 },
+        ]}
+      >
+        <View style={[
+          styles.statusPill,
+          { backgroundColor: CUSTOMER_STATUS_COLORS[customer.status || "none"].bg },
+        ]}>
+          <Text style={[
+            styles.statusPillText,
+            { color: CUSTOMER_STATUS_COLORS[customer.status || "none"].text },
+          ]}>
+            {CUSTOMER_STATUS_LABELS[customer.status || "none"]}
+          </Text>
+        </View>
+        <Text style={{ fontSize: 12, color: colors.muted }}>Tap to change</Text>
+        {customer.status === "confirmed" && customer.confirmedAt ? (
+          <Text style={{ fontSize: 12, color: colors.success, marginTop: 2 }}>
+            Confirmed{customer.confirmedBy ? ` by ${customer.confirmedBy}` : ""} on {formatDate(customer.confirmedAt)}
+          </Text>
+        ) : null}
+      </Pressable>
+
+      {/* Status Picker Dropdown */}
+      {showStatusPicker && (
+        <View style={[styles.statusPickerContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {(Object.keys(CUSTOMER_STATUS_LABELS) as CustomerStatus[]).map((statusKey) => {
+            const isActive = (customer.status || "none") === statusKey;
+            const statusColor = CUSTOMER_STATUS_COLORS[statusKey];
+            return (
+              <Pressable
+                key={statusKey}
+                onPress={() => {
+                  if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  const now = new Date().toISOString();
+                  const updates: Partial<typeof customer> = {
+                    ...customer,
+                    status: statusKey,
+                    statusUpdatedAt: now,
+                    updatedAt: now,
+                  };
+                  if (statusKey === "confirmed") {
+                    Alert.prompt
+                      ? Alert.prompt(
+                          "Who Confirmed?",
+                          "Enter the name of who confirmed (or leave blank)",
+                          (name) => {
+                            updateCustomer({ ...customer, status: statusKey, statusUpdatedAt: now, updatedAt: now, confirmedBy: name || "", confirmedAt: now });
+                            setShowStatusPicker(false);
+                          }
+                        )
+                      : (() => {
+                          updateCustomer({ ...customer, status: statusKey, statusUpdatedAt: now, updatedAt: now, confirmedBy: "", confirmedAt: now });
+                          setShowStatusPicker(false);
+                        })();
+                  } else {
+                    updateCustomer({ ...customer, status: statusKey, statusUpdatedAt: now, updatedAt: now });
+                    setShowStatusPicker(false);
+                  }
+                }}
+                style={({ pressed }) => [
+                  styles.statusPickerItem,
+                  isActive && { backgroundColor: statusColor.bg },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <View style={[styles.statusDotSmall, { backgroundColor: statusColor.text }]} />
+                <Text style={[
+                  styles.statusPickerText,
+                  { color: isActive ? statusColor.text : colors.foreground },
+                  isActive && { fontWeight: "700" },
+                ]}>
+                  {CUSTOMER_STATUS_LABELS[statusKey]}
+                </Text>
+                {isActive && <IconSymbol name="checkmark" size={16} color={statusColor.text} />}
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Open in OpenPhone */}
+      {customer.openPhoneContactId ? (
+        <Pressable
+          onPress={() => {
+            // OpenPhone deep link: openphone://contacts/{contactId}
+            const url = `https://app.openphone.com/contacts/${customer.openPhoneContactId}`;
+            Linking.openURL(url).catch(() => {
+              Alert.alert("Cannot Open", "Could not open OpenPhone. Make sure it's installed.");
+            });
+          }}
+          style={({ pressed }) => [
+            styles.openPhoneButton,
+            { borderColor: colors.border },
+            pressed && { opacity: 0.7 },
+          ]}
+        >
+          <IconSymbol name="message.fill" size={18} color={colors.primary} />
+          <Text style={[styles.openPhoneText, { color: colors.primary }]}>Open in OpenPhone</Text>
+        </Pressable>
+      ) : null}
+
+      {/* Quick Book Button */}
+      <Pressable
+        onPress={() => router.push({ pathname: "/appointment/add" as any, params: { customerId: customer.id } })}
+        style={({ pressed }) => [
+          styles.bookButton,
+          { backgroundColor: colors.primary },
+          pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+        ]}
+      >
+        <IconSymbol name="calendar.badge.plus" size={22} color="#FFFFFF" />
+        <Text style={styles.bookButtonText}>Book Appointment</Text>
+      </Pressable>
 
       {/* Tab Switcher */}
       <View style={[styles.tabBar, { backgroundColor: colors.surface }]}>
@@ -567,4 +693,15 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, marginBottom: 16 },
   backButton: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
   backButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+  bookButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginHorizontal: 20, marginBottom: 16, paddingVertical: 14, borderRadius: 14 },
+  bookButtonText: { color: "#FFFFFF", fontSize: 17, fontWeight: "700" },
+  statusBadgeRow: { alignItems: "center", marginBottom: 8, gap: 4 },
+  statusPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  statusPillText: { fontSize: 15, fontWeight: "700" },
+  statusPickerContainer: { marginHorizontal: 20, marginBottom: 12, borderRadius: 14, borderWidth: 1, overflow: "hidden" },
+  statusPickerItem: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 13, gap: 10 },
+  statusDotSmall: { width: 10, height: 10, borderRadius: 5 },
+  statusPickerText: { fontSize: 15, flex: 1 },
+  openPhoneButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 20, marginBottom: 8, paddingVertical: 12, borderRadius: 14, borderWidth: 1 },
+  openPhoneText: { fontSize: 15, fontWeight: "600" },
 });

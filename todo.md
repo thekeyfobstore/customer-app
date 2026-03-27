@@ -69,3 +69,11 @@
 - [x] Update search to include new fields (keyCode, dealerComparison, partNumber)
 - [x] Add deep link support to open customer profile from OpenPhone (by phone number)
 - [x] Provide instructions for adding deep link to OpenPhone contacts
+- [x] Add prominent "Book Appointment" button on customer profile for one-tap booking
+- [x] Add customer status/pipeline field (Need Price & Part #, Quote Sent, Rejected, Book Later, Booked - Needs Confirmation, Confirmed)
+- [x] Track who confirmed and when for Confirmed status
+- [x] Add one-tap status picker on customer profile
+- [x] Add status filter on customer list
+- [x] Show status badge on customer cards in list view
+- [x] Add "Open in OpenPhone" link on customer detail and customer list cards
+- [ ] Add location/area filter on customer list alongside status filter

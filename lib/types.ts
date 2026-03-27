@@ -16,6 +16,35 @@ export interface Address {
   zip: string;
 }
 
+export type CustomerStatus =
+  | "need-price-part"
+  | "quote-sent"
+  | "rejected"
+  | "book-later"
+  | "booked-needs-confirmation"
+  | "confirmed"
+  | "none";
+
+export const CUSTOMER_STATUS_LABELS: Record<CustomerStatus, string> = {
+  "none": "No Status",
+  "need-price-part": "Need Price & Part #",
+  "quote-sent": "Quote Sent",
+  "rejected": "Rejected",
+  "book-later": "Said Yes - Book Later",
+  "booked-needs-confirmation": "Booked - Needs Confirmation",
+  "confirmed": "Confirmed",
+};
+
+export const CUSTOMER_STATUS_COLORS: Record<CustomerStatus, { bg: string; text: string }> = {
+  "none": { bg: "#E5E7EB", text: "#6B7280" },
+  "need-price-part": { bg: "#FEF3C7", text: "#92400E" },
+  "quote-sent": { bg: "#DBEAFE", text: "#1E40AF" },
+  "rejected": { bg: "#FEE2E2", text: "#991B1B" },
+  "book-later": { bg: "#E0E7FF", text: "#3730A3" },
+  "booked-needs-confirmation": { bg: "#FED7AA", text: "#9A3412" },
+  "confirmed": { bg: "#D1FAE5", text: "#065F46" },
+};
+
 export interface Customer {
   id: string;
   firstName: string;
@@ -27,6 +56,10 @@ export interface Customer {
   tags: string[];
   address?: Address;
   vehicles?: Vehicle[];
+  status?: CustomerStatus;
+  confirmedBy?: string; // who confirmed
+  confirmedAt?: string; // ISO date when confirmed
+  statusUpdatedAt?: string; // ISO date when status last changed
   createdAt: string;
   updatedAt: string;
   openPhoneContactId?: string;

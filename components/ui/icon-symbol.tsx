@@ -10,6 +10,7 @@ const MAPPING = {
   "house.fill": "home",
   "person.2.fill": "people",
   "calendar": "event",
+  "calendar.badge.plus": "event-available",
   "gearshape.fill": "settings",
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
