@@ -15,7 +15,7 @@ import { useColors } from "@/hooks/use-colors";
 import { useData } from "@/lib/data-context";
 import { getInitials, formatPhone } from "@/lib/helpers";
 import type { Customer, CustomerStatus } from "@/lib/types";
-import { CUSTOMER_STATUS_LABELS, CUSTOMER_STATUS_COLORS } from "@/lib/types";
+import { CUSTOMER_STATUS_LABELS, CUSTOMER_STATUS_COLORS, ROUTE_CODES, ROUTE_LABELS } from "@/lib/types";
 import { Linking, ScrollView } from "react-native";
 
 export default function CustomersScreen() {
@@ -25,6 +25,7 @@ export default function CustomersScreen() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CustomerStatus | "all">("all");
   const [areaFilter, setAreaFilter] = useState<string>("all");
+  const [routeFilter, setRouteFilter] = useState<string>("all");
 
   // Extract unique areas from customer company fields and addresses
   const areas = useMemo(() => {
@@ -91,6 +92,14 @@ export default function CustomersScreen() {
     if (areaFilter !== "all") {
       result = result.filter((c) => customerInArea(c, areaFilter));
     }
+    // Route filter
+    if (routeFilter !== "all") {
+      result = result.filter((c) => {
+        if (!c.route) return false;
+        const routeCode = c.route.split(" ")[0]?.toUpperCase() || c.route.toUpperCase();
+        return routeCode === routeFilter || c.route.toUpperCase().startsWith(routeFilter);
+      });
+    }
     if (!search.trim()) return result;
     const q = search.toLowerCase();
     return result.filter((c) => {
@@ -122,7 +131,7 @@ export default function CustomersScreen() {
       }
       return false;
     });
-  }, [customers, search, statusFilter, areaFilter, customerInArea]);
+  }, [customers, search, statusFilter, areaFilter, routeFilter, customerInArea]);
 
   // Helper to find matching vehicle for search highlight
   const getMatchingVehicle = useCallback(
@@ -202,6 +211,12 @@ export default function CustomersScreen() {
             ) : null}
             {item.company ? (
               <Text style={[styles.detail, { color: colors.muted }]} numberOfLines={1}>{item.company}</Text>
+            ) : null}
+            {item.route ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+                <IconSymbol name="arrow.triangle.turn.up.right.diamond.fill" size={12} color="#065F46" />
+                <Text style={{ color: "#065F46", fontSize: 12, fontWeight: "600" }}>{item.route}</Text>
+              </View>
             ) : null}
             {(() => {
               const matchedVehicle = getMatchingVehicle(item);
@@ -328,6 +343,57 @@ export default function CustomersScreen() {
                 { color: isActive ? sc.text : colors.muted },
                 isActive && { fontWeight: "700" },
               ]}>{CUSTOMER_STATUS_LABELS[s]} ({count})</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      {/* Route Filter Chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterChips}
+      >
+        <Pressable
+          onPress={() => setRouteFilter("all")}
+          style={({ pressed }) => [
+            styles.chip,
+            routeFilter === "all"
+              ? { backgroundColor: "#D1FAE5", borderColor: "#065F46", borderWidth: 1.5 }
+              : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+            pressed && { opacity: 0.7 },
+          ]}
+        >
+          <Text style={[
+            styles.chipText,
+            { color: routeFilter === "all" ? "#065F46" : colors.muted },
+            routeFilter === "all" && { fontWeight: "700" },
+          ]}>All Routes</Text>
+        </Pressable>
+        {ROUTE_CODES.map((code) => {
+          const count = customers.filter((c) => {
+            if (!c.route) return false;
+            const rc = c.route.split(" ")[0]?.toUpperCase() || c.route.toUpperCase();
+            return rc === code || c.route.toUpperCase().startsWith(code);
+          }).length;
+          const isActive = routeFilter === code;
+          return (
+            <Pressable
+              key={code}
+              onPress={() => setRouteFilter(isActive ? "all" : code)}
+              style={({ pressed }) => [
+                styles.chip,
+                isActive
+                  ? { backgroundColor: "#D1FAE5", borderColor: "#065F46", borderWidth: 1.5 }
+                  : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Text style={[
+                styles.chipText,
+                { color: isActive ? "#065F46" : colors.muted },
+                isActive && { fontWeight: "700" },
+              ]}>{code} ({count})</Text>
             </Pressable>
           );
         })}
@@ -620,8 +686,10 @@ const styles = StyleSheet.create({
   },
   filterChips: {
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingBottom: 8,
     gap: 8,
+    flexDirection: "row",
+    alignItems: "center",
   },
   chip: {
     paddingHorizontal: 12,

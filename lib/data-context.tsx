@@ -165,6 +165,7 @@ function dataReducer(state: DataState, action: DataAction): DataState {
               address: serverContact.address || existing.address,
               vehicles: serverContact.vehicles && serverContact.vehicles.length > 0 ? serverContact.vehicles : existing.vehicles,
               openPhoneContactId: serverContact.openPhoneContactId || existing.openPhoneContactId,
+              route: serverContact.route || existing.route,
               updatedAt: new Date().toISOString(),
             };
           }
@@ -340,6 +341,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             createdAt: sc.createdAt || new Date().toISOString(),
             updatedAt: sc.updatedAt || new Date().toISOString(),
             openPhoneContactId: sc.openPhoneId || undefined,
+            route: sc.route || undefined,
           } as Customer;
         });
 

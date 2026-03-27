@@ -430,6 +430,12 @@ export default function CustomerDetailScreen() {
                 </Text>
               </View>
             ) : null}
+            {customer.route ? (
+              <View style={styles.infoRow}>
+                <IconSymbol name="arrow.triangle.turn.up.right.diamond.fill" size={18} color="#065F46" />
+                <Text style={[styles.infoText, { color: "#065F46", fontWeight: "600" }]}>{customer.route}</Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Vehicles */}

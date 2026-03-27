@@ -18,6 +18,7 @@ import { generateId } from "@/lib/helpers";
 import { loadApiKey } from "@/lib/storage";
 import { createOpenPhoneContact } from "@/lib/openphone";
 import type { Customer } from "@/lib/types";
+import { ROUTE_CODES, ROUTE_LABELS } from "@/lib/types";
 
 export default function AddCustomerScreen() {
   const colors = useColors();
@@ -36,6 +37,7 @@ export default function AddCustomerScreen() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [zip, setZip] = useState("");
+  const [route, setRoute] = useState("");
   const [syncToOpenPhone, setSyncToOpenPhone] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -62,6 +64,7 @@ export default function AddCustomerScreen() {
       address: hasAddress
         ? { street: street.trim(), city: city.trim(), state: state.trim(), zip: zip.trim() }
         : undefined,
+      route: route.trim() || undefined,
       createdAt: now,
       updatedAt: now,
     };
@@ -91,7 +94,7 @@ export default function AddCustomerScreen() {
     addCustomer(customer);
     setSaving(false);
     router.back();
-  }, [firstName, lastName, phone, email, company, notes, tagsText, street, city, state, zip, syncToOpenPhone, addCustomer, router]);
+  }, [firstName, lastName, phone, email, company, notes, tagsText, street, city, state, zip, route, syncToOpenPhone, addCustomer, router]);
 
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]}>
@@ -202,6 +205,53 @@ export default function AddCustomerScreen() {
               returnKeyType="next"
             />
           </View>
+        </View>
+
+        {/* Route */}
+        <Text style={[styles.label, { color: colors.muted }]}>ROUTE</Text>
+        <View style={[styles.fieldGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 12, gap: 8 }}>
+            <Pressable
+              onPress={() => setRoute("")}
+              style={({ pressed }) => [
+                { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5 },
+                !route
+                  ? { backgroundColor: "#D1FAE5", borderColor: "#065F46" }
+                  : { backgroundColor: colors.surface, borderColor: colors.border },
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Text style={{ color: !route ? "#065F46" : colors.muted, fontSize: 14, fontWeight: !route ? "700" : "500" }}>None</Text>
+            </Pressable>
+            {ROUTE_CODES.map((code) => {
+              const isActive = route.startsWith(code);
+              return (
+                <Pressable
+                  key={code}
+                  onPress={() => setRoute(isActive ? "" : code)}
+                  style={({ pressed }) => [
+                    { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5 },
+                    isActive
+                      ? { backgroundColor: "#D1FAE5", borderColor: "#065F46" }
+                      : { backgroundColor: colors.surface, borderColor: colors.border },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <Text style={{ color: isActive ? "#065F46" : colors.muted, fontSize: 14, fontWeight: isActive ? "700" : "500" }}>{code} - {ROUTE_LABELS[code]}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          {route ? (
+            <TextInput
+              style={[styles.input, { color: colors.foreground }]}
+              placeholder={`Location detail (e.g., ${route} - Bedford)`}
+              placeholderTextColor={colors.muted}
+              value={route}
+              onChangeText={setRoute}
+              returnKeyType="next"
+            />
+          ) : null}
         </View>
 
         {/* Notes & Tags */}

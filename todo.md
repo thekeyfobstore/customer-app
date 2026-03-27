@@ -92,3 +92,8 @@
 - [x] Send quote via OpenPhone text message
 - [x] Auto-set customer status to "Quote Sent" after sending quote
 - [x] Update app icon with user's Key Fob Store logo
+- [x] Add "route" field to Customer type (e.g., "HRM - Bedford", "PHK - Arichat", "NG - Truro")
+- [x] Map route field from OpenPhone custom field during import/sync
+- [x] Add route filter on customer list to view customers by route
+- [x] Show route on customer detail screen and allow editing
+- [x] Add route to add/edit customer form

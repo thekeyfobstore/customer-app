@@ -43,6 +43,7 @@ export const contacts = mysqlTable("contacts", {
   dealerComparison: text("dealerComparison"),
   partNumber: varchar("partNumber", { length: 128 }),
   address: text("address"),
+  route: varchar("route", { length: 128 }),
   rawJson: text("rawJson"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

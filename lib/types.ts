@@ -45,6 +45,24 @@ export const CUSTOMER_STATUS_COLORS: Record<CustomerStatus, { bg: string; text: 
   "confirmed": { bg: "#D1FAE5", text: "#065F46" },
 };
 
+/** Route codes for service areas */
+export const ROUTE_CODES = ["HRM", "PHK", "NG", "INV"] as const;
+export type RouteCode = (typeof ROUTE_CODES)[number];
+
+export const ROUTE_LABELS: Record<RouteCode, string> = {
+  HRM: "Halifax Regional",
+  PHK: "Port Hawkesbury",
+  NG: "New Glasgow",
+  INV: "Inverness",
+};
+
+export const ROUTE_DESCRIPTIONS: Record<RouteCode, string> = {
+  HRM: "Halifax areas (Bedford, Dartmouth, etc.)",
+  PHK: "Petit de Grat to St. Peter's to Antigonish",
+  NG: "PHK to Truro corridor",
+  INV: "Cabot Trail: Baddeck, Inverness, Mabou, Port Hood",
+};
+
 export interface Customer {
   id: string;
   firstName: string;
@@ -60,6 +78,7 @@ export interface Customer {
   confirmedBy?: string; // who confirmed
   confirmedAt?: string; // ISO date when confirmed
   statusUpdatedAt?: string; // ISO date when status last changed
+  route?: string; // e.g., "HRM - Bedford", "PHK - Arichat", "NG - Truro"
   createdAt: string;
   updatedAt: string;
   openPhoneContactId?: string;
@@ -123,6 +142,7 @@ export interface OpenPhoneContact {
     dealerComparison?: string;
     partNumber?: string;
     address?: string;
+    route?: string;
   };
 }
 

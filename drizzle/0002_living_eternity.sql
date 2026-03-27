@@ -1,0 +1,1 @@
+ALTER TABLE `contacts` ADD `route` varchar(128);

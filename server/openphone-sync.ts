@@ -48,6 +48,8 @@ function extractCustomFields(rawCustomFields: any[]): Record<string, string> {
       result.address = typeof value === "string" ? value : JSON.stringify(value);
     } else if (name.includes("part") && name.includes("number")) {
       result.partNumber = String(value);
+    } else if (key === "route" || name === "route" || name.includes("route")) {
+      result.route = String(value);
     }
   }
   return result;
@@ -235,6 +237,7 @@ async function syncContacts(): Promise<{ added: number; updated: number; total: 
       dealerComparison: customFields.dealerComparison || null,
       partNumber: customFields.partNumber || null,
       address: customFields.address || null,
+      route: customFields.route || null,
       rawJson: JSON.stringify(c),
     };
 

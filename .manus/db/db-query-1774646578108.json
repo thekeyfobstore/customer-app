@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `contacts` ADD `route` varchar(128);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 32GLG7sxUVfjckc.root --database NXDJK2u879uxdmPPuqVE8T --execute ALTER TABLE `contacts` ADD `route` varchar(128);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 276
+}

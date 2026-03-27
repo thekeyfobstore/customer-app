@@ -43,6 +43,8 @@ function extractCustomFields(rawCustomFields: any[]): OpenPhoneContact["customFi
       result.address = typeof value === "string" ? value : JSON.stringify(value);
     } else if (name.includes("part") && name.includes("number")) {
       result.partNumber = String(value);
+    } else if (key === "route" || name === "route" || name.includes("route")) {
+      result.route = String(value);
     }
     // Skip "Notion customer made" / "entered-in-quickbooks"
   }
@@ -540,6 +542,7 @@ export function convertToCustomers(contacts: OpenPhoneContact[]): Customer[] {
         tags: [],
         vehicles,
         address,
+        route: cf.route || undefined,
         createdAt: now,
         updatedAt: now,
         openPhoneContactId: c.id,
