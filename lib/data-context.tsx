@@ -12,6 +12,7 @@ import {
   loadCloverOrders,
   saveCloverOrders,
 } from "./storage";
+import { migrateKeysToSecureStore } from "./secure-storage";
 
 interface DataState {
   customers: Customer[];
@@ -145,6 +146,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const refreshData = useCallback(async () => {
     dispatch({ type: "SET_LOADING", payload: true });
+    // Migrate any API keys from AsyncStorage to encrypted SecureStore (one-time)
+    await migrateKeysToSecureStore();
     const [customers, appointments, messages, serviceRecords, cloverOrders] = await Promise.all([
       loadCustomers(),
       loadAppointments(),

@@ -37,3 +37,7 @@
 - [x] Add push notification appointment reminders
 - [x] Add service history per vehicle (track services done on each vehicle)
 - [x] Update appointment detail with "Send to Clover" button
+- [x] Migrate API key storage from AsyncStorage to encrypted SecureStore
+- [x] Build guided setup wizard for OpenPhone API key with step-by-step instructions
+- [x] Build guided setup wizard for Clover API token and Merchant ID with permission guidance
+- [x] Add security info screen explaining how keys are stored and protected

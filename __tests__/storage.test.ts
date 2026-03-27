@@ -16,6 +16,25 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+// Mock SecureStore
+const mockSecureStorage = new Map<string, string>();
+vi.mock("expo-secure-store", () => ({
+  setItemAsync: vi.fn((key: string, value: string) => {
+    mockSecureStorage.set(key, value);
+    return Promise.resolve();
+  }),
+  getItemAsync: vi.fn((key: string) => Promise.resolve(mockSecureStorage.get(key) || null)),
+  deleteItemAsync: vi.fn((key: string) => {
+    mockSecureStorage.delete(key);
+    return Promise.resolve();
+  }),
+}));
+
+// Mock Platform as non-web so SecureStore is used
+vi.mock("react-native", () => ({
+  Platform: { OS: "ios" },
+}));
+
 import {
   loadCustomers,
   saveCustomers,
@@ -30,6 +49,7 @@ import type { Customer, Appointment } from "../lib/types";
 
 beforeEach(() => {
   mockStorage.clear();
+  mockSecureStorage.clear();
 });
 
 describe("Customer storage", () => {
@@ -87,19 +107,19 @@ describe("Appointment storage", () => {
   });
 });
 
-describe("API key storage", () => {
+describe("API key storage (SecureStore)", () => {
   it("should return empty string when no key exists", async () => {
     const result = await loadApiKey();
     expect(result).toBe("");
   });
 
-  it("should save and load API key", async () => {
+  it("should save and load API key via SecureStore", async () => {
     await saveApiKey("test-api-key-123");
     const result = await loadApiKey();
     expect(result).toBe("test-api-key-123");
   });
 
-  it("should clear API key", async () => {
+  it("should clear API key from SecureStore", async () => {
     await saveApiKey("test-api-key-123");
     await clearApiKey();
     const result = await loadApiKey();

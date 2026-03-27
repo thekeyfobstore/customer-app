@@ -199,6 +199,44 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Setup Wizard */}
+        {(!savedKey || !savedCloverToken) && (
+          <Pressable
+            onPress={() => router.push("/setup-wizard" as any)}
+            style={({ pressed }) => [
+              styles.wizardBanner,
+              { backgroundColor: colors.primary + "10", borderColor: colors.primary + "30" },
+              pressed && { opacity: 0.8 },
+            ]}
+          >
+            <View style={[styles.wizardIcon, { backgroundColor: colors.primary + "20" }]}>
+              <IconSymbol name="checkmark" size={22} color={colors.primary} />
+            </View>
+            <View style={styles.wizardText}>
+              <Text style={[styles.wizardTitle, { color: colors.foreground }]}>Setup Wizard</Text>
+              <Text style={[styles.wizardSubtitle, { color: colors.muted }]}>
+                Step-by-step guide to connect OpenPhone and Clover
+              </Text>
+            </View>
+            <IconSymbol name="chevron.right" size={16} color={colors.primary} />
+          </Pressable>
+        )}
+
+        {/* Security Info */}
+        <Pressable
+          onPress={() => router.push("/setup-wizard" as any)}
+          style={({ pressed }) => [
+            styles.securityBanner,
+            { backgroundColor: colors.success + "08", borderColor: colors.success + "25" },
+            pressed && { opacity: 0.8 },
+          ]}
+        >
+          <IconSymbol name="lock.fill" size={16} color={colors.success} />
+          <Text style={[styles.securityText, { color: colors.muted }]}>
+            API keys are encrypted on-device. Tap to learn more.
+          </Text>
+        </Pressable>
+
         {/* OpenPhone Section */}
         <Text style={[styles.sectionLabel, { color: colors.muted }]}>OPENPHONE</Text>
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -431,4 +469,11 @@ const styles = StyleSheet.create({
   statNumber: { fontSize: 28, fontWeight: "700" },
   statLabel: { fontSize: 12, fontWeight: "500" },
   statDivider: { width: 0.5, marginVertical: 4 },
+  wizardBanner: { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 14, borderWidth: 1, gap: 12, marginBottom: 4 },
+  wizardIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  wizardText: { flex: 1, gap: 2 },
+  wizardTitle: { fontSize: 16, fontWeight: "600" },
+  wizardSubtitle: { fontSize: 13 },
+  securityBanner: { flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, borderWidth: 1, gap: 8, marginBottom: 4 },
+  securityText: { fontSize: 13, flex: 1 },
 });

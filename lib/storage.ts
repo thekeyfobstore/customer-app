@@ -1,5 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Customer, Appointment, Message, ServiceRecord, CloverOrder } from "./types";
+import {
+  loadApiKeySecure, saveApiKeySecure, clearApiKeySecure,
+  loadCloverConfigSecure, saveCloverConfigSecure, clearCloverConfigSecure,
+} from "./secure-storage";
 
 const KEYS = {
   CUSTOMERS: "@clientbook_customers",
@@ -51,48 +55,32 @@ export async function saveMessages(messages: Message[]): Promise<void> {
   await AsyncStorage.setItem(KEYS.MESSAGES, JSON.stringify(messages));
 }
 
+// API keys now use encrypted SecureStore — these wrappers maintain backward compatibility
+
 export async function loadApiKey(): Promise<string> {
-  try {
-    const key = await AsyncStorage.getItem(KEYS.OPENPHONE_API_KEY);
-    return key || "";
-  } catch {
-    return "";
-  }
+  return loadApiKeySecure();
 }
 
 export async function saveApiKey(key: string): Promise<void> {
-  await AsyncStorage.setItem(KEYS.OPENPHONE_API_KEY, key);
+  return saveApiKeySecure(key);
 }
 
 export async function clearApiKey(): Promise<void> {
-  await AsyncStorage.removeItem(KEYS.OPENPHONE_API_KEY);
+  return clearApiKeySecure();
 }
 
-// Clover config
+// Clover config — now uses encrypted SecureStore
+
 export async function loadCloverConfig(): Promise<{ apiToken: string; merchantId: string }> {
-  try {
-    const [apiToken, merchantId] = await Promise.all([
-      AsyncStorage.getItem(KEYS.CLOVER_API_TOKEN),
-      AsyncStorage.getItem(KEYS.CLOVER_MERCHANT_ID),
-    ]);
-    return { apiToken: apiToken || "", merchantId: merchantId || "" };
-  } catch {
-    return { apiToken: "", merchantId: "" };
-  }
+  return loadCloverConfigSecure();
 }
 
 export async function saveCloverConfig(apiToken: string, merchantId: string): Promise<void> {
-  await Promise.all([
-    AsyncStorage.setItem(KEYS.CLOVER_API_TOKEN, apiToken),
-    AsyncStorage.setItem(KEYS.CLOVER_MERCHANT_ID, merchantId),
-  ]);
+  return saveCloverConfigSecure(apiToken, merchantId);
 }
 
 export async function clearCloverConfig(): Promise<void> {
-  await Promise.all([
-    AsyncStorage.removeItem(KEYS.CLOVER_API_TOKEN),
-    AsyncStorage.removeItem(KEYS.CLOVER_MERCHANT_ID),
-  ]);
+  return clearCloverConfigSecure();
 }
 
 // Service records
