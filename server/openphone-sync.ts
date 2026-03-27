@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { getDb } from "./db";
 import { contacts, appSettings, type InsertContact } from "../drizzle/schema";
 
@@ -224,6 +224,11 @@ async function syncContacts(): Promise<{ added: number; updated: number; total: 
     const email = (df.emails || c.emails || [])[0]?.value ||
                   (df.emails || c.emails || [])[0]?.address || "";
 
+    // Extract lastActivityAt from OpenPhone — this is the timestamp of the most recent
+    // conversation activity (message or call), which determines the contact order in OpenPhone
+    const lastActivityRaw = c.lastActivityAt || c.updatedAt || c.createdAt || null;
+    const lastActivityAt = lastActivityRaw ? new Date(lastActivityRaw) : null;
+
     const contactData: InsertContact = {
       openPhoneId: c.id,
       firstName: finalFirstName || null,
@@ -238,6 +243,7 @@ async function syncContacts(): Promise<{ added: number; updated: number; total: 
       partNumber: customFields.partNumber || null,
       address: customFields.address || null,
       route: customFields.route || null,
+      lastActivityAt,
       rawJson: JSON.stringify(c),
     };
 
@@ -277,7 +283,7 @@ export async function getSyncedContacts() {
   const db = await getDb();
   if (!db) return [];
 
-  return db.select().from(contacts).orderBy(contacts.updatedAt);
+  return db.select().from(contacts).orderBy(desc(contacts.lastActivityAt));
 }
 
 /**

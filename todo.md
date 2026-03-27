@@ -99,3 +99,4 @@
 - [x] Add route to add/edit customer form
 - [x] Sort customer list by most recent conversation (last message time) to match phone system order
 - [x] Add long-press on phone/text buttons to open OpenPhone app for that contact
+- [x] Fix customer sort to match OpenPhone order (most recent inbound contact at top using lastActivityAt)

@@ -181,9 +181,10 @@ export default function CustomersScreen() {
 
   const sorted = useMemo(
     () => [...filtered].sort((a, b) => {
-      // Sort by most recent message first (like phone system)
-      const aTime = lastMessageMap.get(a.id) || a.updatedAt || a.createdAt;
-      const bTime = lastMessageMap.get(b.id) || b.updatedAt || b.createdAt;
+      // Sort by most recent activity (matching OpenPhone order)
+      // Priority: lastActivityAt from OpenPhone > local message time > updatedAt
+      const aTime = a.lastActivityAt || lastMessageMap.get(a.id) || a.updatedAt || a.createdAt;
+      const bTime = b.lastActivityAt || lastMessageMap.get(b.id) || b.updatedAt || b.createdAt;
       // Most recent first
       const timeDiff = bTime.localeCompare(aTime);
       if (timeDiff !== 0) return timeDiff;

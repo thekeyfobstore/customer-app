@@ -79,6 +79,7 @@ export interface Customer {
   confirmedAt?: string; // ISO date when confirmed
   statusUpdatedAt?: string; // ISO date when status last changed
   route?: string; // e.g., "HRM - Bedford", "PHK - Arichat", "NG - Truro"
+  lastActivityAt?: string; // ISO date of most recent OpenPhone conversation activity
   createdAt: string;
   updatedAt: string;
   openPhoneContactId?: string;
