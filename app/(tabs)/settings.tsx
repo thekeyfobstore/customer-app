@@ -269,7 +269,7 @@ export default function SettingsScreen() {
               <View style={[styles.syncDot, { backgroundColor: colors.success }]} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.syncText, { color: colors.foreground }]}>
-                  Auto-Sync Active — {syncStatus.data.contactCount} contacts
+                  Auto-Sync Active — {syncStatus.data.contactCount} synced from OpenPhone
                 </Text>
                 <Text style={{ fontSize: 12, color: colors.muted }}>
                   {syncStatus.data.lastSync

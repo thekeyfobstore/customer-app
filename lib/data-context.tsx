@@ -143,17 +143,39 @@ function dataReducer(state: DataState, action: DataAction): DataState {
       return { ...state, customers: [...state.customers, ...newCustomers] };
     }
     case "SYNC_CONTACTS": {
-      // Merge server contacts: update existing by openPhoneContactId, add new ones by phone
+      // Merge server contacts: use openPhoneContactId as primary key, phone as secondary.
+      // Include ALL contacts from the server (even those without phone numbers).
       const merged = [...state.customers];
-      const existingByOpenPhoneId = new Map(merged.filter(c => c.openPhoneContactId).map(c => [c.openPhoneContactId!, c]));
-      const existingByPhone = new Map(merged.map(c => [c.phone?.replace(/\D/g, ""), c]));
+      const existingByOpenPhoneId = new Map(
+        merged.filter(c => c.openPhoneContactId).map(c => [c.openPhoneContactId!, c])
+      );
+      // Normalize phone to last 10 digits for matching
+      const normalizePhone = (p: string) => {
+        const digits = (p || "").replace(/\D/g, "");
+        return digits.length >= 7 ? digits.slice(-10) : digits;
+      };
+      const existingByPhone = new Map(
+        merged.filter(c => c.phone).map(c => [normalizePhone(c.phone), c])
+      );
+      // Track which openPhoneIds we've already added (to avoid duplicates within the payload)
+      const addedOpenPhoneIds = new Set(
+        merged.filter(c => c.openPhoneContactId).map(c => c.openPhoneContactId!)
+      );
+      const addedPhones = new Set(
+        merged.filter(c => c.phone).map(c => normalizePhone(c.phone))
+      );
+
       for (const serverContact of action.payload) {
-        const existingById = serverContact.openPhoneContactId ? existingByOpenPhoneId.get(serverContact.openPhoneContactId) : undefined;
-        const phoneDigits = serverContact.phone?.replace(/\D/g, "") || "";
-        const existingByPh = phoneDigits ? existingByPhone.get(phoneDigits) : undefined;
+        const opId = serverContact.openPhoneContactId || "";
+        const phoneNorm = normalizePhone(serverContact.phone);
+
+        // Try to find existing match
+        const existingById = opId ? existingByOpenPhoneId.get(opId) : undefined;
+        const existingByPh = phoneNorm.length >= 7 ? existingByPhone.get(phoneNorm) : undefined;
         const existing = existingById || existingByPh;
+
         if (existing) {
-          // Update existing: merge server data but keep local-only fields (status, appointments, etc.)
+          // Update existing: merge server data but keep local-only fields (status, etc.)
           const idx = merged.findIndex(c => c.id === existing.id);
           if (idx >= 0) {
             merged[idx] = {
@@ -170,9 +192,15 @@ function dataReducer(state: DataState, action: DataAction): DataState {
               updatedAt: new Date().toISOString(),
             };
           }
-        } else if (phoneDigits.length >= 7) {
-          // New contact
-          merged.push(serverContact);
+        } else {
+          // New contact — add if not a duplicate within this payload
+          const isDuplicateOpId = opId && addedOpenPhoneIds.has(opId);
+          const isDuplicatePhone = phoneNorm.length >= 7 && addedPhones.has(phoneNorm);
+          if (!isDuplicateOpId && !isDuplicatePhone) {
+            merged.push(serverContact);
+            if (opId) addedOpenPhoneIds.add(opId);
+            if (phoneNorm.length >= 7) addedPhones.add(phoneNorm);
+          }
         }
       }
       return { ...state, customers: merged };

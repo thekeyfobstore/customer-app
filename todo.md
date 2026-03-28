@@ -105,3 +105,4 @@
 - [x] Fix blank/unlabeled filter chips (status, route, area)
 - [x] Fix contact names showing vehicle/phone info instead of person name
 - [x] Fix JSON path for server contacts (result.data.json) so all 4000+ contacts load
+- [x] Fix: App shows only 2000 contacts while server syncs 4000+ — find and fix the bottleneck
