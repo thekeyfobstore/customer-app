@@ -125,3 +125,4 @@
 - [x] PRIORITY: Batch-apply sourceUrl deep link to ALL existing OpenPhone contacts — 1799/1801 done
 - [x] PRIORITY: Build real conversation history extraction — fixed msg.text bug, AI extraction working
 - [x] PRIORITY: Make extraction run automatically on sync cycle so profiles are pre-filled when user opens them
+- [ ] Fix: Error codes and app not working — diagnose and fix
