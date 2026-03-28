@@ -66,6 +66,7 @@ export default function AddVehicleScreen() {
           const companyField = buildCompanyField(updatedCustomer);
           await updateOpenPhoneContact(apiKey, customer.openPhoneContactId, {
             company: companyField,
+            phone: updatedCustomer.phone,
           });
           updatedCustomer.company = companyField;
         }

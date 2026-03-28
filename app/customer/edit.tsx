@@ -93,6 +93,7 @@ export default function EditCustomerScreen() {
           const companyField = buildCompanyField(updatedCustomer);
           await updateOpenPhoneContact(apiKey, customer.openPhoneContactId, {
             company: companyField,
+            phone: updatedCustomer.phone,
           });
           // Update the company field locally to match what we sent to OpenPhone
           updatedCustomer.company = companyField;

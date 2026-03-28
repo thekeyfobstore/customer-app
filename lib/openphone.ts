@@ -453,6 +453,7 @@ export async function updateOpenPhoneContact(
     company?: string;
     firstName?: string;
     lastName?: string;
+    phone?: string; // used to build sourceUrl deep link
   }
 ): Promise<boolean> {
   try {
@@ -469,6 +470,14 @@ export async function updateOpenPhoneContact(
     }
     if (updates.lastName !== undefined) {
       body.defaultFields.lastName = updates.lastName;
+    }
+
+    // Set sourceUrl to deep link back to ClientBook for this customer
+    // This shows as a clickable link in OpenPhone's contact view
+    if (updates.phone) {
+      const phoneDigits = updates.phone.replace(/\D/g, "");
+      body.sourceUrl = `https://custcrmapp-nxdjk2u8.manus.space/link?phone=${phoneDigits}`;
+      body.source = "ClientBook";
     }
 
     const response = await fetch(`${BASE_URL}/contacts/${openPhoneContactId}`, {

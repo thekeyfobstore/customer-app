@@ -117,3 +117,5 @@
 - [x] Parse OpenPhone Company field correctly (name + vehicle + phone + city all in one field)
 - [x] Two-way sync: write customer updates back to OpenPhone Company field
 - [x] Company field format: "Name YearMakeModel Phone City"
+- [x] Fix customer list sort to match OpenPhone order (most recent conversation first)
+- [x] Add one-tap deep link from OpenPhone contact to ClientBook customer profile via sourceUrl
