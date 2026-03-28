@@ -119,3 +119,6 @@
 - [x] Company field format: "Name YearMakeModel Phone City"
 - [x] Fix customer list sort to match OpenPhone order (most recent conversation first)
 - [x] Add one-tap deep link from OpenPhone contact to ClientBook customer profile via sourceUrl
+- [x] Auto-extract customer info (name, vehicle, location) from OpenPhone conversations on each sync cycle
+- [x] Auto-update customer profiles with extracted info (no manual "Extract Info" step needed)
+- [ ] Push extracted info back to OpenPhone Company field automatically (pending: needs batch update endpoint)

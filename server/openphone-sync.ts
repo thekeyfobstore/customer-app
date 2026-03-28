@@ -1,6 +1,7 @@
 import { eq, desc } from "drizzle-orm";
 import { getDb } from "./db";
 import { contacts, appSettings, type InsertContact } from "../drizzle/schema";
+import { parseCompanyField } from "./company-parser";
 
 const BASE_URL = "https://api.openphone.com/v1";
 const SYNC_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
@@ -210,13 +211,21 @@ async function syncContacts(): Promise<{ added: number; updated: number; total: 
     const lastName = df.lastName || c.lastName || "";
     const company = df.company || c.company || "";
 
-    // Parse name from company if needed
+    // Parse name, vehicle, and location from company field
     let finalFirstName = firstName;
     let finalLastName = lastName;
-    if (!firstName && !lastName && company) {
-      const parsed = parseNameFromCompany(company);
-      finalFirstName = parsed.firstName;
-      finalLastName = parsed.lastName;
+    let parsedVehicle = "";
+    let parsedLocation = "";
+    let parsedVin = "";
+    if (company) {
+      const parsed = parseCompanyField(company);
+      if (!firstName && !lastName) {
+        finalFirstName = parsed.firstName;
+        finalLastName = parsed.lastName;
+      }
+      parsedVehicle = parsed.vehicle;
+      parsedLocation = parsed.location;
+      if (parsed.vin) parsedVin = parsed.vin;
     }
 
     const phone = (df.phoneNumbers || c.phoneNumbers || [])[0]?.value ||
@@ -236,12 +245,12 @@ async function syncContacts(): Promise<{ added: number; updated: number; total: 
       phone: phone || null,
       email: email || null,
       company: company || null,
-      vehicleYearMakeModel: customFields.vehicle || null,
-      vin: customFields.vin || null,
+      vehicleYearMakeModel: customFields.vehicle || parsedVehicle || null,
+      vin: customFields.vin || parsedVin || null,
       keyCode: customFields.keyCode || null,
       dealerComparison: customFields.dealerComparison || null,
       partNumber: customFields.partNumber || null,
-      address: customFields.address || null,
+      address: customFields.address || parsedLocation || null,
       route: customFields.route || null,
       lastActivityAt,
       rawJson: JSON.stringify(c),
@@ -401,15 +410,21 @@ async function syncConversationParticipants(): Promise<{ added: number }> {
       const openPhoneId = `conv-${convId}-${digits}`;
       if (existingOpenPhoneIds.has(openPhoneId)) continue;
 
-      // Parse name from conversation name if available
+      // Parse name, vehicle, location from conversation name
       let firstName = "";
       let lastName = "";
+      let convVehicle = "";
+      let convLocation = "";
+      let convVin = "";
       if (convName && convName !== participant) {
-        const parsed = parseNameFromCompany(convName);
+        const parsed = parseCompanyField(convName);
         firstName = parsed.firstName;
         lastName = parsed.lastName;
+        convVehicle = parsed.vehicle;
+        convLocation = parsed.location;
+        convVin = parsed.vin;
         // If parsing didn't work, use the whole name as firstName
-        if (!firstName && !lastName) {
+        if (!firstName && !lastName && !convVehicle) {
           const nameParts = convName.trim().split(/\s+/);
           firstName = nameParts[0] || "";
           lastName = nameParts.slice(1).join(" ");
@@ -424,12 +439,12 @@ async function syncConversationParticipants(): Promise<{ added: number }> {
           phone: participant,
           email: null,
           company: convName || null,
-          vehicleYearMakeModel: null,
-          vin: null,
+          vehicleYearMakeModel: convVehicle || null,
+          vin: convVin || null,
           keyCode: null,
           dealerComparison: null,
           partNumber: null,
-          address: null,
+          address: convLocation || null,
           route: null,
           lastActivityAt,
           rawJson: JSON.stringify(conv),
