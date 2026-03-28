@@ -106,3 +106,7 @@
 - [x] Fix contact names showing vehicle/phone info instead of person name
 - [x] Fix JSON path for server contacts (result.data.json) so all 4000+ contacts load
 - [x] Fix: App shows only 2000 contacts while server syncs 4000+ — find and fix the bottleneck
+- [x] Remove route filter tabs from Customers screen (routes already have their own bottom tab)
+- [x] Tapping phone number opens OpenPhone app directly (not native phone/call)
+- [x] Remove call/text/copy buttons — single tap to OpenPhone for messaging
+- [x] Works on customer list and customer detail screen

@@ -321,71 +321,33 @@ export default function CustomerDetailScreen() {
         </View>
       )}
 
-      {/* Open in OpenPhone */}
+      {/* Open in OpenPhone — single tap to message */}
       {customer.phone ? (
         <View style={styles.phoneActionsRow}>
           <Pressable
             onPress={() => {
               if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              // Try openphone:// deep link first, fall back to tel:
-              Linking.openURL("openphone://").catch(() => {
-                Linking.openURL(`tel:${customer.phone}`).catch(() => {
-                  Alert.alert("Cannot Call", "Could not open phone app.");
+              const digits = customer.phone.replace(/\D/g, "");
+              const formatted = digits.startsWith("1") ? `+${digits}` : `+1${digits}`;
+              // Open OpenPhone directly to the message thread for this number
+              Linking.openURL(`openphone://message?number=${encodeURIComponent(formatted)}`).catch(() => {
+                // Fallback: try sms: which routes to OpenPhone if set as default
+                Linking.openURL(`sms:${formatted}`).catch(() => {
+                  // Last resort: open OpenPhone contact page in browser
+                  if (customer.openPhoneContactId) {
+                    Linking.openURL(`https://app.openphone.com/contacts/${customer.openPhoneContactId}`).catch(() => {});
+                  }
                 });
               });
             }}
-            onLongPress={() => {
-              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              Clipboard.setStringAsync(customer.phone);
-              Alert.alert("Copied", `${formatPhone(customer.phone)} copied to clipboard`);
-            }}
             style={({ pressed }) => [
               styles.phoneActionBtn,
-              { backgroundColor: colors.primary },
+              { backgroundColor: "#22C55E", flex: 1 },
               pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
             ]}
           >
-            <IconSymbol name="phone.fill" size={18} color="#FFFFFF" />
-            <Text style={styles.phoneActionBtnText}>Call</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              // Try openphone:// deep link first, fall back to sms:
-              Linking.openURL("openphone://").catch(() => {
-                Linking.openURL(`sms:${customer.phone}`).catch(() => {
-                  Alert.alert("Cannot Text", "Could not open messaging app.");
-                });
-              });
-            }}
-            onLongPress={() => {
-              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              Clipboard.setStringAsync(customer.phone);
-              Alert.alert("Copied", `${formatPhone(customer.phone)} copied to clipboard`);
-            }}
-            style={({ pressed }) => [
-              styles.phoneActionBtn,
-              { backgroundColor: "#22C55E" },
-              pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
-            ]}
-          >
-            <IconSymbol name="message.fill" size={18} color="#FFFFFF" />
-            <Text style={styles.phoneActionBtnText}>Text</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              Clipboard.setStringAsync(customer.phone);
-              Alert.alert("Copied", `${formatPhone(customer.phone)} copied to clipboard`);
-            }}
-            style={({ pressed }) => [
-              styles.phoneActionBtn,
-              { backgroundColor: colors.muted },
-              pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
-            ]}
-          >
-            <IconSymbol name="doc.text.fill" size={18} color="#FFFFFF" />
-            <Text style={styles.phoneActionBtnText}>Copy #</Text>
+            <IconSymbol name="message.fill" size={20} color="#FFFFFF" />
+            <Text style={styles.phoneActionBtnText}>Message in OpenPhone</Text>
           </Pressable>
         </View>
       ) : null}

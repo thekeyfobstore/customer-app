@@ -146,10 +146,9 @@ export default function CustomersScreen() {
       const vehicleInfo = getVehicleInfo(item);
       const location = getCustomerLocation(item);
 
-      // Build the OpenPhone URL for the phone number tap
-      const openPhoneUrl = item.openPhoneContactId
-        ? `https://app.openphone.com/contacts/${item.openPhoneContactId}`
-        : null;
+      // Build OpenPhone deep link for messaging
+      const phoneDigits = (item.phone || "").replace(/\D/g, "");
+      const phoneFormatted = phoneDigits.startsWith("1") ? `+${phoneDigits}` : `+1${phoneDigits}`;
 
       return (
         <Pressable
@@ -186,11 +185,14 @@ export default function CustomersScreen() {
             {item.phone ? (
               <Pressable
                 onPress={() => {
-                  if (openPhoneUrl) {
-                    Linking.openURL(openPhoneUrl).catch(() => {});
-                  } else {
-                    Linking.openURL(`tel:${item.phone}`).catch(() => {});
-                  }
+                  // Open OpenPhone message thread directly
+                  Linking.openURL(`openphone://message?number=${encodeURIComponent(phoneFormatted)}`).catch(() => {
+                    Linking.openURL(`sms:${phoneFormatted}`).catch(() => {
+                      if (item.openPhoneContactId) {
+                        Linking.openURL(`https://app.openphone.com/contacts/${item.openPhoneContactId}`).catch(() => {});
+                      }
+                    });
+                  });
                 }}
                 style={({ pressed }) => [pressed && { opacity: 0.6 }]}
               >
