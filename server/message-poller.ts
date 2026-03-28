@@ -113,7 +113,8 @@ async function pollMessages(): Promise<void> {
       // Only process incoming messages
       if (msg.direction !== "incoming") continue;
       // Skip empty
-      if (!msg.body || msg.body.trim().length === 0) continue;
+      const msgText = msg.text || msg.body || "";
+      if (!msgText || msgText.trim().length === 0) continue;
 
       // Process through the same extraction pipeline as webhooks
       try {
@@ -125,7 +126,7 @@ async function pollMessages(): Promise<void> {
               conversationId: msg.conversationId || "",
               from: msg.from || "",
               to: pnId,
-              body: msg.body,
+              body: msgText,
               direction: "incoming",
               createdAt: msg.createdAt,
             },

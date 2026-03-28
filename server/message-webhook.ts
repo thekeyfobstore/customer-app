@@ -22,7 +22,7 @@ interface OpenPhoneMessageEvent {
       conversationId: string;
       from: string;
       to: string;
-      body: string;
+      body: string; // Note: OpenPhone API returns 'text' not 'body', but we normalize in processMessageWebhook
       direction: "incoming" | "outgoing";
       createdAt: string;
       media?: Array<{ url: string; type: string }>;
@@ -87,7 +87,7 @@ async function fetchConversationMessages(
       .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
       .map((m: any) => {
         const dir = m.direction === "incoming" ? "Customer" : "You";
-        return `${dir}: ${m.body || ""}`;
+        return `${dir}: ${m.text || m.body || ""}`;
       })
       .filter((m: string) => m.trim().length > 5);
   } catch (err) {
@@ -191,15 +191,16 @@ export async function processMessageWebhook(event: OpenPhoneMessageEvent): Promi
     return { action: "skipped", phone: "", extracted: null };
   }
 
-  // Skip empty messages
-  if (!message.body || message.body.trim().length === 0) {
+  // Skip empty messages (OpenPhone API uses 'text' field, but we accept both)
+  const messageBody = message.body || "";
+  if (!messageBody || messageBody.trim().length === 0) {
     return { action: "skipped", phone: "", extracted: null };
   }
 
   const customerPhone = normalizePhone(message.from);
   if (!customerPhone) return { action: "skipped", phone: "", extracted: null };
 
-  console.log(`[Message Webhook] Processing incoming from ${customerPhone}: "${message.body.substring(0, 80)}..."`);
+  console.log(`[Message Webhook] Processing incoming from ${customerPhone}: "${messageBody.substring(0, 80)}..."`);
 
   const db = await getDb();
   if (!db) {
@@ -209,7 +210,7 @@ export async function processMessageWebhook(event: OpenPhoneMessageEvent): Promi
 
   // ── Build conversation context ──
   const apiKey = await getApiKey();
-  let conversationMessages = [`Customer: ${message.body}`];
+  let conversationMessages = [`Customer: ${messageBody}`];
 
   if (apiKey) {
     try {
@@ -227,7 +228,7 @@ export async function processMessageWebhook(event: OpenPhoneMessageEvent): Promi
   if (!extracted) {
     console.log("[Message Webhook] No info extracted");
     // Still record the message timestamp on the contact if they exist
-    await touchContact(db, customerPhone, message.body);
+    await touchContact(db, customerPhone, messageBody);
     return { action: "skipped", phone: customerPhone, extracted: null };
   }
 
@@ -238,7 +239,7 @@ export async function processMessageWebhook(event: OpenPhoneMessageEvent): Promi
 
   if (existing) {
     // Update existing — only fill empty fields, never overwrite
-    const updates = buildUpdates(existing, extracted, message.body);
+    const updates = buildUpdates(existing, extracted, messageBody);
 
     if (Object.keys(updates).length > 0) {
       await db.update(contacts).set(updates).where(eq(contacts.id, existing.id));
@@ -250,7 +251,7 @@ export async function processMessageWebhook(event: OpenPhoneMessageEvent): Promi
     return { action: "skipped", phone: customerPhone, extracted };
   } else {
     // Create new contact
-    await createContactFromExtraction(db, customerPhone, extracted, message.body);
+    await createContactFromExtraction(db, customerPhone, extracted, messageBody);
     console.log(`[Message Webhook] Created new contact for ${customerPhone}`);
     return { action: "created", phone: customerPhone, extracted };
   }

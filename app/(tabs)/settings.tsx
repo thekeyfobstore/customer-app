@@ -56,6 +56,21 @@ export default function SettingsScreen() {
     onSuccess: () => messageStatus.refetch(),
   });
 
+  // Batch operations
+  const batchPushLinksMutation = trpc.contacts.batchPushLinks.useMutation({
+    onSuccess: (data) => {
+      Alert.alert("Links Pushed", `Updated ${data.updated} contacts in OpenPhone with ClientBook links. ${data.failed} failed.`);
+    },
+    onError: () => Alert.alert("Error", "Failed to push links to OpenPhone."),
+  });
+  const batchExtractMutation = trpc.contacts.batchExtract.useMutation({
+    onSuccess: (data) => {
+      Alert.alert("Extraction Complete", `Processed ${data.processed} contacts. Extracted info for ${data.extracted}. ${data.failed} failed.`);
+      syncStatus.refetch();
+    },
+    onError: () => Alert.alert("Error", "Failed to extract info from conversations."),
+  });
+
   // Clover state
   const [cloverToken, setCloverToken] = useState("");
   const [cloverMerchant, setCloverMerchant] = useState("");
@@ -368,6 +383,48 @@ export default function SettingsScreen() {
           )}
           {savedKey ? (
             <>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <Pressable
+                onPress={() => {
+                  Alert.alert(
+                    "Push Links to OpenPhone",
+                    "This will add a ClientBook link to every contact in OpenPhone so you can tap to jump to their profile. This may take a few minutes for 2000+ contacts.",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "Push Links", onPress: () => batchPushLinksMutation.mutate() },
+                    ]
+                  );
+                }}
+                disabled={batchPushLinksMutation.isPending}
+                style={({ pressed }) => [styles.sectionRow, pressed && { opacity: 0.6 }]}
+              >
+                <IconSymbol name="paperplane.fill" size={20} color={colors.primary} />
+                <Text style={[styles.sectionRowTitle, { color: colors.foreground, flex: 1 }]}>
+                  {batchPushLinksMutation.isPending ? "Pushing Links..." : "Push ClientBook Links to OpenPhone"}
+                </Text>
+                <IconSymbol name="chevron.right" size={16} color={colors.muted} />
+              </Pressable>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <Pressable
+                onPress={() => {
+                  Alert.alert(
+                    "Extract Info from Conversations",
+                    "This will read your OpenPhone message history and use AI to extract customer names, vehicles, and locations. Processes 50 contacts at a time.",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "Extract", onPress: () => batchExtractMutation.mutate({ limit: 50 }) },
+                    ]
+                  );
+                }}
+                disabled={batchExtractMutation.isPending}
+                style={({ pressed }) => [styles.sectionRow, pressed && { opacity: 0.6 }]}
+              >
+                <IconSymbol name="sparkles" size={20} color={colors.primary} />
+                <Text style={[styles.sectionRowTitle, { color: colors.foreground, flex: 1 }]}>
+                  {batchExtractMutation.isPending ? "Extracting..." : "Extract Info from Conversations"}
+                </Text>
+                <IconSymbol name="chevron.right" size={16} color={colors.muted} />
+              </Pressable>
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
               <Pressable onPress={() => router.push("/import-contacts" as any)} style={({ pressed }) => [styles.sectionRow, pressed && { opacity: 0.6 }]}>
                 <IconSymbol name="arrow.down.doc.fill" size={20} color={colors.primary} />

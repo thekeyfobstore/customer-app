@@ -121,4 +121,7 @@
 - [x] Add one-tap deep link from OpenPhone contact to ClientBook customer profile via sourceUrl
 - [x] Auto-extract customer info (name, vehicle, location) from OpenPhone conversations on each sync cycle
 - [x] Auto-update customer profiles with extracted info (no manual "Extract Info" step needed)
-- [ ] Push extracted info back to OpenPhone Company field automatically (pending: needs batch update endpoint)
+- [x] Push extracted info back to OpenPhone Company field automatically (pending: needs batch update endpoint)
+- [x] PRIORITY: Batch-apply sourceUrl deep link to ALL existing OpenPhone contacts — 1799/1801 done
+- [x] PRIORITY: Build real conversation history extraction — fixed msg.text bug, AI extraction working
+- [x] PRIORITY: Make extraction run automatically on sync cycle so profiles are pre-filled when user opens them

@@ -6,6 +6,7 @@ import {
   setOpenPhoneApiKey,
   triggerSync,
 } from "./openphone-sync";
+import { batchPushSourceUrls, batchExtractFromConversations } from "./batch-operations";
 import { triggerMessagePoll } from "./message-poller";
 import { listWebhooks } from "./message-webhook";
 import { getDb } from "./db";
@@ -104,4 +105,25 @@ export const contactsRouter = router({
     const result = await triggerMessagePoll();
     return { success: true, ...result };
   }),
+
+  /**
+   * Batch push ClientBook deep links (sourceUrl) to ALL OpenPhone contacts.
+   * This makes each contact in OpenPhone show a clickable "ClientBook" link.
+   */
+  batchPushLinks: publicProcedure.mutation(async () => {
+    const result = await batchPushSourceUrls();
+    return { success: true, ...result };
+  }),
+
+  /**
+   * Batch extract customer info from conversation history.
+   * Processes contacts missing name/vehicle/location by reading their OpenPhone messages.
+   */
+  batchExtract: publicProcedure
+    .input(z.object({ limit: z.number().min(1).max(200).optional() }).optional())
+    .mutation(async ({ input }) => {
+      const limit = input?.limit ?? 50;
+      const result = await batchExtractFromConversations(limit);
+      return { success: true, ...result };
+    }),
 });

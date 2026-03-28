@@ -2,6 +2,7 @@ import { eq, desc } from "drizzle-orm";
 import { getDb } from "./db";
 import { contacts, appSettings, type InsertContact } from "../drizzle/schema";
 import { parseCompanyField } from "./company-parser";
+import { autoExtractOnSync } from "./batch-operations";
 
 const BASE_URL = "https://api.openphone.com/v1";
 const SYNC_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
@@ -536,6 +537,8 @@ async function runSync() {
         .values({ key: "last_sync_time", value: now })
         .onDuplicateKeyUpdate({ set: { value: now } });
     }
+    // Auto-extract info from conversations for contacts missing data (5 per cycle)
+    await autoExtractOnSync();
   } catch (err) {
     console.error("[OpenPhone Sync] Sync failed:", err);
   }
