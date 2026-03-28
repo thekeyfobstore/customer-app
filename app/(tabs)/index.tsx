@@ -24,62 +24,48 @@ export default function CustomersScreen() {
   const { customers, messages, loading } = useData();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CustomerStatus | "all">("all");
-  const [areaFilter, setAreaFilter] = useState<string>("all");
-  const [routeFilter, setRouteFilter] = useState<string>("all");
 
-  // Extract unique areas from customer company fields and addresses
-  const areas = useMemo(() => {
-    const areaSet = new Set<string>();
-    for (const c of customers) {
-      // Extract area from address
-      if (c.address?.city) areaSet.add(c.address.city.trim());
-      if (c.address?.street) {
-        // Check for known Nova Scotia areas in address
-        const addr = c.address.street.toLowerCase();
-        const knownAreas = ["pictou", "bridgewater", "halifax", "dartmouth", "truro", "sydney",
-          "antigonish", "new glasgow", "amherst", "yarmouth", "kentville", "wolfville",
-          "windsor", "digby", "lunenburg", "mahone bay", "chester", "shelburne",
-          "liverpool", "middleton", "berwick", "port hawkesbury", "glace bay",
-          "eskasoni", "easkasoni", "baddeck", "inverness", "cheticamp", "canso",
-          "guysborough", "springhill", "parrsboro", "tatamagouche", "westville",
-          "stellarton", "moncton", "fredericton", "saint john", "miramichi",
-          "bathurst", "campbellton", "sussex", "sackville", "oromocto",
-          "lower sackville", "bedford", "cole harbour", "eastern passage"];
-        for (const area of knownAreas) {
-          if (addr.includes(area)) {
-            areaSet.add(area.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "));
-          }
-        }
-      }
-      // Extract area from company field (your format: "Name Year Make Model Location")
-      if (c.company) {
-        const companyLower = c.company.toLowerCase();
-        const knownAreas = ["pictou", "bridgewater", "halifax", "dartmouth", "truro", "sydney",
-          "antigonish", "new glasgow", "amherst", "yarmouth", "kentville", "wolfville",
-          "windsor", "digby", "lunenburg", "mahone bay", "chester", "shelburne",
-          "liverpool", "middleton", "berwick", "port hawkesbury", "glace bay",
-          "eskasoni", "easkasoni", "baddeck", "inverness", "cheticamp", "canso",
-          "guysborough", "springhill", "parrsboro", "tatamagouche", "westville",
-          "stellarton", "moncton", "fredericton", "saint john", "miramichi",
-          "bathurst", "campbellton", "sussex", "sackville", "oromocto",
-          "lower sackville", "bedford", "cole harbour", "eastern passage"];
-        for (const area of knownAreas) {
-          if (companyLower.includes(area)) {
-            areaSet.add(area.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "));
-          }
+  // Helper to extract location from customer data
+  const getCustomerLocation = useCallback((c: Customer): string | null => {
+    // First check address city
+    if (c.address?.city) return c.address.city.trim();
+    // Then check route for location info (format: "CODE - Location")
+    if (c.route) {
+      const parts = c.route.split(" - ");
+      if (parts.length > 1) return parts.slice(1).join(" - ").trim();
+    }
+    // Check company field for known areas
+    if (c.company) {
+      const companyLower = c.company.toLowerCase();
+      const knownAreas = ["pictou", "bridgewater", "halifax", "dartmouth", "truro", "sydney",
+        "antigonish", "new glasgow", "amherst", "yarmouth", "kentville", "wolfville",
+        "windsor", "digby", "lunenburg", "mahone bay", "chester", "shelburne",
+        "liverpool", "middleton", "berwick", "port hawkesbury", "glace bay",
+        "eskasoni", "easkasoni", "baddeck", "inverness", "cheticamp", "canso",
+        "guysborough", "springhill", "parrsboro", "tatamagouche", "westville",
+        "stellarton", "moncton", "fredericton", "saint john", "miramichi",
+        "bathurst", "campbellton", "sussex", "sackville", "oromocto",
+        "lower sackville", "bedford", "cole harbour", "eastern passage"];
+      for (const area of knownAreas) {
+        if (companyLower.includes(area)) {
+          return area.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
         }
       }
     }
-    return Array.from(areaSet).sort();
-  }, [customers]);
+    return null;
+  }, []);
 
-  // Helper to check if a customer belongs to an area
-  const customerInArea = useCallback((c: Customer, area: string): boolean => {
-    const areaLower = area.toLowerCase();
-    if (c.address?.city?.toLowerCase().includes(areaLower)) return true;
-    if (c.address?.street?.toLowerCase().includes(areaLower)) return true;
-    if (c.company?.toLowerCase().includes(areaLower)) return true;
-    return false;
+  // Helper to get primary vehicle info
+  const getVehicleInfo = useCallback((c: Customer): string | null => {
+    if (!c.vehicles || c.vehicles.length === 0) return null;
+    const v = c.vehicles[0];
+    const parts = [v.year, v.make, v.model].filter(Boolean);
+    if (parts.length === 0) return null;
+    const label = parts.join(" ");
+    if (c.vehicles.length > 1) {
+      return `${label} (+${c.vehicles.length - 1} more)`;
+    }
+    return label;
   }, []);
 
   const filtered = useMemo(() => {
@@ -87,18 +73,6 @@ export default function CustomersScreen() {
     // Status filter
     if (statusFilter !== "all") {
       result = result.filter((c) => (c.status || "none") === statusFilter);
-    }
-    // Area filter
-    if (areaFilter !== "all") {
-      result = result.filter((c) => customerInArea(c, areaFilter));
-    }
-    // Route filter
-    if (routeFilter !== "all") {
-      result = result.filter((c) => {
-        if (!c.route) return false;
-        const routeCode = c.route.split(" ")[0]?.toUpperCase() || c.route.toUpperCase();
-        return routeCode === routeFilter || c.route.toUpperCase().startsWith(routeFilter);
-      });
     }
     if (!search.trim()) return result;
     const q = search.toLowerCase();
@@ -131,41 +105,7 @@ export default function CustomersScreen() {
       }
       return false;
     });
-  }, [customers, search, statusFilter, areaFilter, routeFilter, customerInArea]);
-
-  // Helper to find matching vehicle for search highlight
-  const getMatchingVehicle = useCallback(
-    (customer: Customer): string | null => {
-      if (!search.trim() || !customer.vehicles?.length) return null;
-      const q = search.toLowerCase();
-      const match = customer.vehicles.find(
-        (v) =>
-          v.year.toLowerCase().includes(q) ||
-          v.make.toLowerCase().includes(q) ||
-          v.model.toLowerCase().includes(q) ||
-          v.vin.toLowerCase().includes(q) ||
-          (v.keyCode || "").toLowerCase().includes(q) ||
-          (v.dealerComparison || "").toLowerCase().includes(q) ||
-          (v.partNumber || "").toLowerCase().includes(q) ||
-          `${v.year} ${v.make} ${v.model}`.toLowerCase().includes(q) ||
-          `${v.make} ${v.model}`.toLowerCase().includes(q)
-      );
-      if (!match) return null;
-      const parts = [match.year, match.make, match.model].filter(Boolean);
-      const label = parts.join(" ");
-      if (match.vin && match.vin.toLowerCase().includes(q)) {
-        return `${label} (VIN: ...${match.vin.slice(-6)})`;
-      }
-      if (match.keyCode && match.keyCode.toLowerCase().includes(q)) {
-        return `${label} (Key: ${match.keyCode})`;
-      }
-      if (match.partNumber && match.partNumber.toLowerCase().includes(q)) {
-        return `${label} (Part: ${match.partNumber})`;
-      }
-      return label;
-    },
-    [search]
-  );
+  }, [customers, search, statusFilter]);
 
   // Build a map of customerId -> most recent message timestamp
   const lastMessageMap = useMemo(() => {
@@ -182,13 +122,10 @@ export default function CustomersScreen() {
   const sorted = useMemo(
     () => [...filtered].sort((a, b) => {
       // Sort by most recent activity (matching OpenPhone order)
-      // Priority: lastActivityAt from OpenPhone > local message time > updatedAt
       const aTime = a.lastActivityAt || lastMessageMap.get(a.id) || a.updatedAt || a.createdAt;
       const bTime = b.lastActivityAt || lastMessageMap.get(b.id) || b.updatedAt || b.createdAt;
-      // Most recent first
       const timeDiff = bTime.localeCompare(aTime);
       if (timeDiff !== 0) return timeDiff;
-      // Fallback: alphabetical by first name
       return a.firstName.localeCompare(b.firstName);
     }),
     [filtered, lastMessageMap]
@@ -200,12 +137,20 @@ export default function CustomersScreen() {
       const hasRealName = item.firstName.trim() || item.lastName.trim();
       let displayName = `${item.firstName} ${item.lastName}`.trim();
       if (!hasRealName) {
-        // Fallback: use company, then phone
         displayName = item.company || formatPhone(item.phone) || "Unknown";
       }
       const initials = hasRealName
         ? getInitials(item.firstName, item.lastName)
         : displayName.charAt(0).toUpperCase() || "?";
+
+      const vehicleInfo = getVehicleInfo(item);
+      const location = getCustomerLocation(item);
+
+      // Build the OpenPhone URL for the phone number tap
+      const openPhoneUrl = item.openPhoneContactId
+        ? `https://app.openphone.com/contacts/${item.openPhoneContactId}`
+        : null;
+
       return (
         <Pressable
           onPress={() => router.push(`/customer/${item.id}` as any)}
@@ -219,6 +164,7 @@ export default function CustomersScreen() {
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <View style={styles.cardContent}>
+            {/* Row 1: Name + Status */}
             <View style={styles.nameRow}>
               <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
                 {displayName}
@@ -235,64 +181,52 @@ export default function CustomersScreen() {
                 </View>
               ) : null}
             </View>
+
+            {/* Row 2: Phone number (tappable for OpenPhone) */}
             {item.phone ? (
-              <Text style={[styles.detail, { color: colors.muted }]}>
-                {formatPhone(item.phone)}
-              </Text>
-            ) : null}
-            {item.company ? (
-              <Text style={[styles.detail, { color: colors.muted }]} numberOfLines={1}>{item.company}</Text>
-            ) : null}
-            {item.route ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
-                <IconSymbol name="arrow.triangle.turn.up.right.diamond.fill" size={12} color="#065F46" />
-                <Text style={{ color: "#065F46", fontSize: 12, fontWeight: "600" }}>{item.route}</Text>
-              </View>
-            ) : null}
-            {(() => {
-              const matchedVehicle = getMatchingVehicle(item);
-              if (matchedVehicle) {
-                return (
-                  <View style={styles.vehicleMatchRow}>
-                    <IconSymbol name="car.fill" size={13} color={colors.primary} />
-                    <Text style={[styles.vehicleMatchText, { color: colors.primary }]}>
-                      {matchedVehicle}
-                    </Text>
-                  </View>
-                );
-              }
-              if (item.vehicles && item.vehicles.length > 0) {
-                return (
-                  <Text style={[styles.detail, { color: colors.muted }]}>
-                    {item.vehicles.length} vehicle{item.vehicles.length !== 1 ? 's' : ''}
-                  </Text>
-                );
-              }
-              return null;
-            })()}
-          </View>
-          <View style={styles.cardActions}>
-            {item.openPhoneContactId ? (
               <Pressable
                 onPress={() => {
-                  const url = `https://app.openphone.com/contacts/${item.openPhoneContactId}`;
-                  Linking.openURL(url).catch(() => {});
+                  if (openPhoneUrl) {
+                    Linking.openURL(openPhoneUrl).catch(() => {});
+                  } else {
+                    Linking.openURL(`tel:${item.phone}`).catch(() => {});
+                  }
                 }}
-                style={({ pressed }) => [
-                  styles.openPhoneIcon,
-                  { backgroundColor: colors.primary + "15" },
-                  pressed && { opacity: 0.6 },
-                ]}
+                style={({ pressed }) => [pressed && { opacity: 0.6 }]}
               >
-                <IconSymbol name="message.fill" size={16} color={colors.primary} />
+                <Text style={[styles.phoneText, { color: colors.primary }]}>
+                  {formatPhone(item.phone)}
+                </Text>
               </Pressable>
             ) : null}
-            <IconSymbol name="chevron.right" size={18} color={colors.muted} />
+
+            {/* Row 3: Vehicle year, make, model */}
+            {vehicleInfo ? (
+              <View style={styles.infoRow}>
+                <IconSymbol name="car.fill" size={11} color={colors.muted} />
+                <Text style={[styles.infoText, { color: colors.muted }]} numberOfLines={1}>
+                  {vehicleInfo}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Row 4: Location */}
+            {location ? (
+              <View style={styles.infoRow}>
+                <IconSymbol name="mappin.circle.fill" size={11} color={colors.muted} />
+                <Text style={[styles.infoText, { color: colors.muted }]} numberOfLines={1}>
+                  {location}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <View style={styles.cardActions}>
+            <IconSymbol name="chevron.right" size={16} color={colors.muted} />
           </View>
         </Pressable>
       );
     },
-    [colors, router, search, getMatchingVehicle]
+    [colors, router, getVehicleInfo, getCustomerLocation]
   );
 
   const keyExtractor = useCallback((item: Customer) => item.id, []);
@@ -315,7 +249,7 @@ export default function CustomersScreen() {
       </View>
 
       <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <IconSymbol name="magnifyingglass" size={18} color={colors.muted} />
+        <IconSymbol name="magnifyingglass" size={16} color={colors.muted} />
         <TextInput
           style={[styles.searchInput, { color: colors.foreground }]}
           placeholder="Search by name, phone, or vehicle..."
@@ -326,7 +260,7 @@ export default function CustomersScreen() {
         />
         {search ? (
           <Pressable onPress={() => setSearch("")} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
-            <IconSymbol name="xmark" size={16} color={colors.muted} />
+            <IconSymbol name="xmark" size={14} color={colors.muted} />
           </Pressable>
         ) : null}
       </View>
@@ -378,106 +312,6 @@ export default function CustomersScreen() {
           );
         })}
       </ScrollView>
-
-      {/* Route Filter Chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterChips}
-      >
-        <Pressable
-          onPress={() => setRouteFilter("all")}
-          style={({ pressed }) => [
-            styles.chip,
-            routeFilter === "all"
-              ? { backgroundColor: "#D1FAE5", borderColor: "#065F46", borderWidth: 1.5 }
-              : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
-            pressed && { opacity: 0.7 },
-          ]}
-        >
-          <Text style={[
-            styles.chipText,
-            { color: routeFilter === "all" ? "#065F46" : colors.muted },
-            routeFilter === "all" && { fontWeight: "700" },
-          ]}>All Routes</Text>
-        </Pressable>
-        {ROUTE_CODES.map((code) => {
-          const count = customers.filter((c) => {
-            if (!c.route) return false;
-            const rc = c.route.split(" ")[0]?.toUpperCase() || c.route.toUpperCase();
-            return rc === code || c.route.toUpperCase().startsWith(code);
-          }).length;
-          const isActive = routeFilter === code;
-          return (
-            <Pressable
-              key={code}
-              onPress={() => setRouteFilter(isActive ? "all" : code)}
-              style={({ pressed }) => [
-                styles.chip,
-                isActive
-                  ? { backgroundColor: "#D1FAE5", borderColor: "#065F46", borderWidth: 1.5 }
-                  : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
-                pressed && { opacity: 0.7 },
-              ]}
-            >
-              <Text style={[
-                styles.chipText,
-                { color: isActive ? "#065F46" : colors.muted },
-                isActive && { fontWeight: "700" },
-              ]}>{code} ({count})</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* Area Filter Chips */}
-      {areas.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterChips}
-        >
-          <Pressable
-            onPress={() => setAreaFilter("all")}
-            style={({ pressed }) => [
-              styles.chip,
-              areaFilter === "all"
-                ? { backgroundColor: colors.primary + "20", borderColor: colors.primary, borderWidth: 1.5 }
-                : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
-              pressed && { opacity: 0.7 },
-            ]}
-          >
-            <Text style={[
-              styles.chipText,
-              { color: areaFilter === "all" ? colors.primary : colors.muted },
-              areaFilter === "all" && { fontWeight: "700" },
-            ]}>All Areas</Text>
-          </Pressable>
-          {areas.map((area) => {
-            const count = customers.filter((c) => customerInArea(c, area)).length;
-            const isActive = areaFilter === area;
-            return (
-              <Pressable
-                key={area}
-                onPress={() => setAreaFilter(isActive ? "all" : area)}
-                style={({ pressed }) => [
-                  styles.chip,
-                  isActive
-                    ? { backgroundColor: colors.primary + "20", borderColor: colors.primary, borderWidth: 1.5 }
-                    : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
-                  pressed && { opacity: 0.7 },
-                ]}
-              >
-                <Text style={[
-                  styles.chipText,
-                  { color: isActive ? colors.primary : colors.muted },
-                  isActive && { fontWeight: "700" },
-                ]}>{area} ({count})</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      )}
 
       {sorted.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -560,79 +394,100 @@ export default function CustomersScreen() {
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingTop: 6,
+    paddingBottom: 8,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "700",
     letterSpacing: 0.37,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 13,
     marginTop: 2,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 20,
-    marginBottom: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
+    marginBottom: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    gap: 8,
+    gap: 6,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     padding: 0,
   },
   listContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 100,
   },
   card: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
-    borderRadius: 14,
+    padding: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 8,
-    gap: 12,
+    marginBottom: 6,
+    gap: 10,
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
   avatarText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "600",
   },
   cardContent: {
     flex: 1,
-    gap: 2,
+    gap: 1,
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
   },
   name: {
-    fontSize: 17,
+    fontSize: 14,
     fontWeight: "600",
   },
-  detail: {
-    fontSize: 14,
+  phoneText: {
+    fontSize: 12,
+    fontWeight: "500",
   },
-  vehicleMatchRow: {
+  infoRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     marginTop: 1,
   },
-  vehicleMatchText: {
-    fontSize: 13,
-    fontWeight: "500",
+  infoText: {
+    fontSize: 11,
+    flex: 1,
+  },
+  statusChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+  },
+  statusChipText: {
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  cardActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   emptyContainer: {
     flex: 1,
@@ -642,14 +497,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "600",
     marginTop: 8,
   },
   emptyText: {
-    fontSize: 15,
+    fontSize: 14,
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 20,
   },
   emptyActions: {
     marginTop: 20,
@@ -716,49 +571,22 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   filterChips: {
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+    gap: 6,
     flexDirection: "row",
     alignItems: "center",
   },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    minHeight: 34,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    minHeight: 30,
     justifyContent: "center" as const,
   },
   chipText: {
-    fontSize: 13,
-    fontWeight: "500",
-    lineHeight: 18,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  statusChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  statusChipText: {
     fontSize: 11,
-    fontWeight: "700",
-  },
-  cardActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  openPhoneIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    fontWeight: "500",
+    lineHeight: 16,
   },
 });
