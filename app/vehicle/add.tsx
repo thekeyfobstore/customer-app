@@ -14,6 +14,8 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useData } from "@/lib/data-context";
 import { generateId } from "@/lib/helpers";
+import { buildCompanyField, updateOpenPhoneContact } from "@/lib/openphone";
+import { loadApiKey } from "@/lib/storage";
 import type { Vehicle } from "@/lib/types";
 
 export default function AddVehicleScreen() {
@@ -30,38 +32,51 @@ export default function AddVehicleScreen() {
   const [dealerComparison, setDealerComparison] = useState("");
   const [partNumber, setPartNumber] = useState("");
 
-  const handleSave = () => {
-    if (!make.trim() && !model.trim()) {
-      Alert.alert("Required", "Please enter at least a make or model.");
-      return;
-    }
+  const customer = getCustomerById(customerId || "");
 
-    const customer = getCustomerById(customerId || "");
-    if (!customer) {
-      Alert.alert("Error", "Customer not found.");
+  const handleSave = async () => {
+    if (!year.trim() && !make.trim() && !model.trim()) {
+      Alert.alert("Required", "Please enter at least year, make, or model.");
       return;
     }
+    if (!customer) return;
 
     const vehicle: Vehicle = {
       id: generateId(),
       year: year.trim(),
       make: make.trim(),
       model: model.trim(),
-      vin: vin.trim().toUpperCase(),
+      vin: vin.trim(),
       keyCode: keyCode.trim(),
       dealerComparison: dealerComparison.trim(),
       partNumber: partNumber.trim(),
     };
 
-    updateCustomer({
+    const updatedCustomer = {
       ...customer,
       vehicles: [...(customer.vehicles || []), vehicle],
       updatedAt: new Date().toISOString(),
-    });
+    };
 
+    // Two-way sync: update OpenPhone company field with new vehicle info
+    if (customer.openPhoneContactId && !customer.openPhoneContactId.startsWith("conv-")) {
+      try {
+        const apiKey = await loadApiKey();
+        if (apiKey) {
+          const companyField = buildCompanyField(updatedCustomer);
+          await updateOpenPhoneContact(apiKey, customer.openPhoneContactId, {
+            company: companyField,
+          });
+          updatedCustomer.company = companyField;
+        }
+      } catch {
+        // Continue even if OpenPhone sync fails
+      }
+    }
+
+    updateCustomer(updatedCustomer);
     router.back();
   };
-
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]}>
       <View style={styles.navBar}>

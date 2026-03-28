@@ -274,7 +274,7 @@ async function findContactByPhone(db: any, phone10: string) {
   return null;
 }
 
-/** Update lastMessageAt on a contact even when no extraction happens. */
+/** Update lastMessageAt and lastActivityAt on a contact even when no extraction happens. */
 async function touchContact(db: any, phone10: string, body: string) {
   const existing = await findContactByPhone(db, phone10);
   if (!existing) return;
@@ -283,13 +283,19 @@ async function touchContact(db: any, phone10: string, body: string) {
     const rawData = existing.rawJson ? JSON.parse(existing.rawJson) : {};
     rawData.lastMessageAt = new Date().toISOString();
     rawData.lastMessageBody = body.substring(0, 200);
-    await db.update(contacts).set({ rawJson: JSON.stringify(rawData) }).where(eq(contacts.id, existing.id));
+    await db.update(contacts).set({
+      rawJson: JSON.stringify(rawData),
+      lastActivityAt: new Date(),
+    }).where(eq(contacts.id, existing.id));
   } catch { /* ignore */ }
 }
 
-/** Build update object — only fill empty fields. */
+/** Build update object — only fill empty fields. Always bumps lastActivityAt. */
 function buildUpdates(existing: any, extracted: ExtractedData, messageBody: string): Record<string, any> {
   const updates: Record<string, any> = {};
+
+  // Always bump lastActivityAt so the contact moves to the top of the list
+  updates.lastActivityAt = new Date();
 
   if (!existing.firstName && extracted.firstName) updates.firstName = extracted.firstName;
   if (!existing.lastName && extracted.lastName) updates.lastName = extracted.lastName;
@@ -352,6 +358,7 @@ async function createContactFromExtraction(
     dealerComparison: null,
     partNumber: null,
     address: extracted.address || extracted.location || null,
+    lastActivityAt: new Date(),
     rawJson: JSON.stringify(rawData),
   });
 }

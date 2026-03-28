@@ -511,6 +511,8 @@ async function runSync() {
     const result = await syncContacts();
     // Also sync conversation participants to catch people not saved as contacts
     const convResult = await syncConversationParticipants();
+    // Update lastActivityAt from conversation data so sort order matches OpenPhone
+    await updateActivityFromConversations();
     const db = await getDb();
     if (db && (result.total > 0 || convResult.added > 0)) {
       const now = new Date().toISOString();

@@ -16,7 +16,7 @@ import { useColors } from "@/hooks/use-colors";
 import { useData } from "@/lib/data-context";
 import { generateId } from "@/lib/helpers";
 import { loadApiKey } from "@/lib/storage";
-import { createOpenPhoneContact } from "@/lib/openphone";
+import { createOpenPhoneContact, buildCompanyField } from "@/lib/openphone";
 import type { Customer } from "@/lib/types";
 import { ROUTE_CODES, ROUTE_LABELS } from "@/lib/types";
 
@@ -75,11 +75,11 @@ export default function AddCustomerScreen() {
         const apiKey = await loadApiKey();
         if (apiKey) {
           // Build company field in the user's preferred format:
-          // "FirstName LastName Year Make Model Location"
-          const companyForOP = customer.company || [customer.firstName, customer.lastName].filter(Boolean).join(" ");
+          // "Name YearMakeModel Phone City"
+          const companyForOP = buildCompanyField(customer);
           const opId = await createOpenPhoneContact(apiKey, {
-            firstName: customer.firstName,
-            lastName: customer.lastName,
+            firstName: "",  // User stores everything in company field
+            lastName: "",
             phone: customer.phone,
             email: customer.email,
             company: companyForOP,

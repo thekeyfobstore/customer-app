@@ -110,3 +110,10 @@
 - [x] Tapping phone number opens OpenPhone app directly (not native phone/call)
 - [x] Remove call/text/copy buttons — single tap to OpenPhone for messaging
 - [x] Works on customer list and customer detail screen
+- [x] Redesign customer cards: show name (or year/make/model if no name), ONE phone number, city only
+- [x] Remove duplicate phone number display from cards
+- [x] Show city shortform (Halifax, Sydney, etc.) — no full address
+- [x] Update OpenPhone company name field to: Customer Name + Year Make Model + Phone
+- [x] Parse OpenPhone Company field correctly (name + vehicle + phone + city all in one field)
+- [x] Two-way sync: write customer updates back to OpenPhone Company field
+- [x] Company field format: "Name YearMakeModel Phone City"

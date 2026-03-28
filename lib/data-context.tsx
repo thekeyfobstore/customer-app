@@ -188,7 +188,9 @@ function dataReducer(state: DataState, action: DataAction): DataState {
               vehicles: serverContact.vehicles && serverContact.vehicles.length > 0 ? serverContact.vehicles : existing.vehicles,
               openPhoneContactId: serverContact.openPhoneContactId || existing.openPhoneContactId,
               route: serverContact.route || existing.route,
-              lastActivityAt: serverContact.lastActivityAt || existing.lastActivityAt,
+              lastActivityAt: serverContact.lastActivityAt && existing.lastActivityAt
+                ? (serverContact.lastActivityAt > existing.lastActivityAt ? serverContact.lastActivityAt : existing.lastActivityAt)
+                : serverContact.lastActivityAt || existing.lastActivityAt,
               updatedAt: new Date().toISOString(),
             };
           }

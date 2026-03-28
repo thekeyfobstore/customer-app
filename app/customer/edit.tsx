@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Text,
   View,
@@ -7,12 +7,15 @@ import {
   Pressable,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useData } from "@/lib/data-context";
 import { ROUTE_CODES, ROUTE_LABELS } from "@/lib/types";
+import { buildCompanyField, updateOpenPhoneContact } from "@/lib/openphone";
+import { loadApiKey } from "@/lib/storage";
 
 export default function EditCustomerScreen() {
   const colors = useColors();
@@ -54,16 +57,19 @@ export default function EditCustomerScreen() {
     }
   }, [customer]);
 
-  const handleSave = () => {
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = useCallback(async () => {
     if (!firstName.trim() && !lastName.trim()) {
       Alert.alert("Required", "Please enter at least a first or last name.");
       return;
     }
     if (!customer) return;
 
+    setSaving(true);
     const hasAddress = street.trim() || city.trim() || state.trim() || zip.trim();
 
-    updateCustomer({
+    const updatedCustomer = {
       ...customer,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -77,9 +83,29 @@ export default function EditCustomerScreen() {
         : customer.address,
       route: route.trim() || undefined,
       updatedAt: new Date().toISOString(),
-    });
+    };
+
+    // Two-way sync: write back to OpenPhone if this contact has an OpenPhone ID
+    if (customer.openPhoneContactId && !customer.openPhoneContactId.startsWith("conv-")) {
+      try {
+        const apiKey = await loadApiKey();
+        if (apiKey) {
+          const companyField = buildCompanyField(updatedCustomer);
+          await updateOpenPhoneContact(apiKey, customer.openPhoneContactId, {
+            company: companyField,
+          });
+          // Update the company field locally to match what we sent to OpenPhone
+          updatedCustomer.company = companyField;
+        }
+      } catch {
+        // Continue even if OpenPhone sync fails
+      }
+    }
+
+    updateCustomer(updatedCustomer);
+    setSaving(false);
     router.back();
-  };
+  }, [firstName, lastName, phone, email, company, notes, tagsText, street, city, state, zip, route, customer, updateCustomer, router]);
 
   if (!customer) {
     return (
@@ -96,8 +122,12 @@ export default function EditCustomerScreen() {
           <Text style={[styles.cancelText, { color: colors.primary }]}>Cancel</Text>
         </Pressable>
         <Text style={[styles.navTitle, { color: colors.foreground }]}>Edit Customer</Text>
-        <Pressable onPress={handleSave} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
-          <Text style={[styles.saveText, { color: colors.primary }]}>Save</Text>
+        <Pressable onPress={handleSave} disabled={saving} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
+          {saving ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Text style={[styles.saveText, { color: colors.primary }]}>Save</Text>
+          )}
         </Pressable>
       </View>
 

@@ -18,6 +18,8 @@ import { useData } from "@/lib/data-context";
 import { generateId } from "@/lib/helpers";
 import { trpc } from "@/lib/trpc";
 import type { ExtractedInfo, Vehicle, Address } from "@/lib/types";
+import { buildCompanyField, updateOpenPhoneContact } from "@/lib/openphone";
+import { loadApiKey } from "@/lib/storage";
 
 export default function ExtractInfoScreen() {
   const colors = useColors();
@@ -100,7 +102,7 @@ export default function ExtractInfoScreen() {
     }
   }, [messages, customer, extractMutation]);
 
-  const handleApply = useCallback(() => {
+  const handleApply = useCallback(async () => {
     if (!customer) return;
 
     const hasAddress = street || city || state || zip;
@@ -112,7 +114,7 @@ export default function ExtractInfoScreen() {
     const newVehicles = vehicles.filter((v) => !existingVehicleIds.has(v.id));
     const mergedVehicles = [...(customer.vehicles || []), ...newVehicles];
 
-    updateCustomer({
+    const updatedCustomer = {
       ...customer,
       firstName: firstName || customer.firstName,
       lastName: lastName || customer.lastName,
@@ -122,7 +124,25 @@ export default function ExtractInfoScreen() {
       address,
       vehicles: mergedVehicles,
       updatedAt: new Date().toISOString(),
-    });
+    };
+
+    // Two-way sync: write back to OpenPhone
+    if (customer.openPhoneContactId && !customer.openPhoneContactId.startsWith("conv-")) {
+      try {
+        const apiKey = await loadApiKey();
+        if (apiKey) {
+          const companyField = buildCompanyField(updatedCustomer);
+          await updateOpenPhoneContact(apiKey, customer.openPhoneContactId, {
+            company: companyField,
+          });
+          updatedCustomer.company = companyField;
+        }
+      } catch {
+        // Continue even if OpenPhone sync fails
+      }
+    }
+
+    updateCustomer(updatedCustomer);
 
     Alert.alert("Updated", "Customer profile has been updated with extracted information.");
     router.back();

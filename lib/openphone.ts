@@ -393,6 +393,100 @@ export async function createOpenPhoneContact(
 }
 
 /**
+ * Build the Company field string in the user's preferred format.
+ * Format: "Name YearMakeModel Phone City"
+ * e.g., "John Smith 2019 Honda Civic (902) 555-1234 Halifax"
+ * If no name: "2019 Honda Civic (902) 555-1234 Halifax"
+ */
+export function buildCompanyField(customer: {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  vehicles?: { year: string; make: string; model: string }[];
+  address?: { city?: string };
+  route?: string;
+}): string {
+  const parts: string[] = [];
+
+  // Name
+  const name = [customer.firstName, customer.lastName].filter(Boolean).join(" ").trim();
+  if (name) parts.push(name);
+
+  // Vehicle (first one)
+  if (customer.vehicles && customer.vehicles.length > 0) {
+    const v = customer.vehicles[0];
+    const vParts = [v.year, v.make, v.model].filter(Boolean).join(" ").trim();
+    if (vParts) parts.push(vParts);
+  }
+
+  // Phone (formatted)
+  if (customer.phone) {
+    const digits = customer.phone.replace(/\D/g, "");
+    const last10 = digits.slice(-10);
+    if (last10.length === 10) {
+      parts.push(`(${last10.slice(0, 3)}) ${last10.slice(3, 6)}-${last10.slice(6)}`);
+    } else {
+      parts.push(customer.phone);
+    }
+  }
+
+  // City
+  if (customer.address?.city) {
+    parts.push(customer.address.city.trim());
+  } else if (customer.route) {
+    // Extract city from route format "CODE - City"
+    const routeParts = customer.route.split(" - ");
+    if (routeParts.length > 1) parts.push(routeParts.slice(1).join(" - ").trim());
+  }
+
+  return parts.join(" ");
+}
+
+/**
+ * Update an existing contact in OpenPhone via PATCH.
+ * Only updates the company field (which contains all info in user's format).
+ */
+export async function updateOpenPhoneContact(
+  apiKey: string,
+  openPhoneContactId: string,
+  updates: {
+    company?: string;
+    firstName?: string;
+    lastName?: string;
+  }
+): Promise<boolean> {
+  try {
+    const body: any = { defaultFields: {} };
+
+    // User stores everything in company field, so always update it
+    if (updates.company !== undefined) {
+      body.defaultFields.company = updates.company;
+    }
+    // Keep firstName/lastName empty in OpenPhone (user's preference)
+    // but allow setting them if explicitly provided
+    if (updates.firstName !== undefined) {
+      body.defaultFields.firstName = updates.firstName;
+    }
+    if (updates.lastName !== undefined) {
+      body.defaultFields.lastName = updates.lastName;
+    }
+
+    const response = await fetch(`${BASE_URL}/contacts/${openPhoneContactId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Fetch messages for a specific conversation (by phone number)
  */
 export async function fetchConversationMessages(

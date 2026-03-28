@@ -133,22 +133,35 @@ export default function CustomersScreen() {
 
   const renderCustomer = useCallback(
     ({ item }: { item: Customer }) => {
-      // Build display name with fallbacks
+      // Build display name: real name first, then vehicle, then phone
       const hasRealName = item.firstName.trim() || item.lastName.trim();
-      let displayName = `${item.firstName} ${item.lastName}`.trim();
-      if (!hasRealName) {
-        displayName = item.company || formatPhone(item.phone) || "Unknown";
+      const vehicleInfo = getVehicleInfo(item);
+      const location = getCustomerLocation(item);
+
+      let displayName = "";
+      if (hasRealName) {
+        displayName = `${item.firstName} ${item.lastName}`.trim();
+      } else if (vehicleInfo) {
+        displayName = vehicleInfo;
+      } else if (item.company) {
+        displayName = item.company;
+      } else {
+        displayName = formatPhone(item.phone) || "Unknown";
       }
+
       const initials = hasRealName
         ? getInitials(item.firstName, item.lastName)
         : displayName.charAt(0).toUpperCase() || "?";
 
-      const vehicleInfo = getVehicleInfo(item);
-      const location = getCustomerLocation(item);
-
       // Build OpenPhone deep link for messaging
       const phoneDigits = (item.phone || "").replace(/\D/g, "");
       const phoneFormatted = phoneDigits.startsWith("1") ? `+${phoneDigits}` : `+1${phoneDigits}`;
+
+      // Subtitle line: vehicle (if name shown) + city
+      const subtitleParts: string[] = [];
+      if (hasRealName && vehicleInfo) subtitleParts.push(vehicleInfo);
+      if (location) subtitleParts.push(location);
+      const subtitle = subtitleParts.join(" · ");
 
       return (
         <Pressable
@@ -163,7 +176,7 @@ export default function CustomersScreen() {
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <View style={styles.cardContent}>
-            {/* Row 1: Name + Status */}
+            {/* Row 1: Name (or vehicle/company if no name) + Status */}
             <View style={styles.nameRow}>
               <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
                 {displayName}
@@ -181,11 +194,10 @@ export default function CustomersScreen() {
               ) : null}
             </View>
 
-            {/* Row 2: Phone number (tappable for OpenPhone) */}
+            {/* Row 2: One phone number (tappable for OpenPhone) */}
             {item.phone ? (
               <Pressable
                 onPress={() => {
-                  // Open OpenPhone message thread directly
                   Linking.openURL(`openphone://message?number=${encodeURIComponent(phoneFormatted)}`).catch(() => {
                     Linking.openURL(`sms:${phoneFormatted}`).catch(() => {
                       if (item.openPhoneContactId) {
@@ -202,24 +214,11 @@ export default function CustomersScreen() {
               </Pressable>
             ) : null}
 
-            {/* Row 3: Vehicle year, make, model */}
-            {vehicleInfo ? (
-              <View style={styles.infoRow}>
-                <IconSymbol name="car.fill" size={11} color={colors.muted} />
-                <Text style={[styles.infoText, { color: colors.muted }]} numberOfLines={1}>
-                  {vehicleInfo}
-                </Text>
-              </View>
-            ) : null}
-
-            {/* Row 4: Location */}
-            {location ? (
-              <View style={styles.infoRow}>
-                <IconSymbol name="mappin.circle.fill" size={11} color={colors.muted} />
-                <Text style={[styles.infoText, { color: colors.muted }]} numberOfLines={1}>
-                  {location}
-                </Text>
-              </View>
+            {/* Row 3: Vehicle + City subtitle */}
+            {subtitle ? (
+              <Text style={[styles.infoText, { color: colors.muted }]} numberOfLines={1}>
+                {subtitle}
+              </Text>
             ) : null}
           </View>
           <View style={styles.cardActions}>
@@ -467,15 +466,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
   },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 1,
-  },
   infoText: {
     fontSize: 11,
-    flex: 1,
+    marginTop: 1,
   },
   statusChip: {
     paddingHorizontal: 6,
