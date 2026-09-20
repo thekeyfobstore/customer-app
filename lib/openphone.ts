@@ -1,4 +1,9 @@
 import { Customer, Message, OpenPhoneContact, Vehicle } from "./types";
+import {
+  buildPreservedContactPatch,
+  CLIENTBOOK_FIELD_NAME,
+  type QuoCustomFieldDefinition,
+} from "./quo-contact-update";
 
 const BASE_URL = "https://api.openphone.com/v1";
 
@@ -443,8 +448,9 @@ export function buildCompanyField(customer: {
 }
 
 /**
- * Update an existing contact in OpenPhone via PATCH.
- * Only updates the company field (which contains all info in user's format).
+ * Update an existing contact in Quo/OpenPhone via a preserving read-modify-write.
+ * PATCH replaces default/custom field collections, so the current contact must be
+ * read first to avoid deleting phone numbers, email addresses, or custom fields.
  */
 export async function updateOpenPhoneContact(
   apiKey: string,
@@ -457,35 +463,31 @@ export async function updateOpenPhoneContact(
   }
 ): Promise<boolean> {
   try {
-    const body: any = { defaultFields: {} };
+    const headers = {
+      Authorization: apiKey,
+      "Content-Type": "application/json",
+    };
+    const [contactResponse, fieldsResponse] = await Promise.all([
+      fetch(`${BASE_URL}/contacts/${openPhoneContactId}`, { headers }),
+      fetch(`${BASE_URL}/contact-custom-fields`, { headers }),
+    ]);
+    if (!contactResponse.ok) return false;
 
-    // User stores everything in company field, so always update it
-    if (updates.company !== undefined) {
-      body.defaultFields.company = updates.company;
-    }
-    // Keep firstName/lastName empty in OpenPhone (user's preference)
-    // but allow setting them if explicitly provided
-    if (updates.firstName !== undefined) {
-      body.defaultFields.firstName = updates.firstName;
-    }
-    if (updates.lastName !== undefined) {
-      body.defaultFields.lastName = updates.lastName;
+    const contactJson = await contactResponse.json();
+    const contact = contactJson.data || contactJson;
+    let clientBookField: QuoCustomFieldDefinition | null = null;
+    if (fieldsResponse.ok) {
+      const fieldsJson = await fieldsResponse.json();
+      clientBookField = (fieldsJson.data || []).find(
+        (field: QuoCustomFieldDefinition) => field.name.toLowerCase() === CLIENTBOOK_FIELD_NAME.toLowerCase(),
+      ) || null;
     }
 
-    // Set sourceUrl to deep link back to ClientBook for this customer
-    // This shows as a clickable link in OpenPhone's contact view
-    if (updates.phone) {
-      const phoneDigits = updates.phone.replace(/\D/g, "");
-      body.sourceUrl = `https://custcrmapp-nxdjk2u8.manus.space/link?phone=${phoneDigits}`;
-      body.source = "ClientBook";
-    }
+    const body = buildPreservedContactPatch(contact, updates, clientBookField);
 
     const response = await fetch(`${BASE_URL}/contacts/${openPhoneContactId}`, {
       method: "PATCH",
-      headers: {
-        Authorization: apiKey,
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(body),
     });
 

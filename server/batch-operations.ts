@@ -2,6 +2,13 @@ import { eq, isNull, and, or, sql } from "drizzle-orm";
 import { getDb } from "./db";
 import { contacts, appSettings } from "../drizzle/schema";
 import { invokeLLM } from "./_core/llm";
+import {
+  buildClientBookUrl,
+  buildPreservedContactPatch,
+  CLIENTBOOK_FIELD_NAME,
+  DEFAULT_CLIENTBOOK_BASE_URL,
+  type QuoCustomFieldDefinition,
+} from "../lib/quo-contact-update";
 
 const BASE_URL = "https://api.openphone.com/v1";
 
@@ -27,45 +34,102 @@ async function fetchPhoneNumberIds(apiKey: string): Promise<string[]> {
   }
 }
 
-// ── Batch SourceUrl Push ─────────────────────────────────────────────
+// ── Batch ClientBook Link Push ───────────────────────────────────────
 
 /**
- * Push sourceUrl (ClientBook deep link) to ALL real OpenPhone contacts.
- * This makes each contact in OpenPhone show a clickable "ClientBook" link.
- * Rate-limited to avoid hitting OpenPhone API limits.
+ * Add the visible ClientBook URL property to a bounded set of recent contacts.
+ * Quo's PATCH replaces field collections, so every contact is read first and
+ * all existing default/custom fields are included in the update.
  */
-export async function batchPushSourceUrls(): Promise<{ updated: number; failed: number; total: number }> {
+export async function batchPushSourceUrls(limit: number = 20): Promise<{
+  updated: number;
+  skipped: number;
+  failed: number;
+  total: number;
+  candidates: number;
+  blockedReason?: string;
+}> {
   const apiKey = await getApiKey();
-  if (!apiKey) return { updated: 0, failed: 0, total: 0 };
+  if (!apiKey) return { updated: 0, skipped: 0, failed: 0, total: 0, candidates: 0, blockedReason: "Quo API key is not configured." };
 
   const db = await getDb();
-  if (!db) return { updated: 0, failed: 0, total: 0 };
+  if (!db) return { updated: 0, skipped: 0, failed: 0, total: 0, candidates: 0, blockedReason: "ClientBook database is unavailable." };
 
-  // Get all real OpenPhone contacts (not conv- prefixed) that have a phone number
   const allContacts = await db.select().from(contacts);
   const realContacts = allContacts.filter(
     (c) => c.openPhoneId && !c.openPhoneId.startsWith("conv-") && c.phone
+  ).sort((a, b) => {
+    const aTime = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0;
+    const bTime = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0;
+    return bTime - aTime;
+  });
+  const selectedContacts = realContacts.slice(0, Math.max(1, Math.min(limit, 50)));
+
+  if (selectedContacts.length === 0) {
+    return { updated: 0, skipped: 0, failed: 0, total: 0, candidates: realContacts.length };
+  }
+
+  const clientBookBaseUrl = (process.env.CLIENTBOOK_PUBLIC_URL || DEFAULT_CLIENTBOOK_BASE_URL).replace(/\/$/, "");
+  const probeUrl = buildClientBookUrl(selectedContacts[0].phone || "", clientBookBaseUrl);
+  if (!probeUrl) {
+    return { updated: 0, skipped: 0, failed: 0, total: selectedContacts.length, candidates: realContacts.length, blockedReason: "No valid phone number was available for link verification." };
+  }
+
+  try {
+    const probe = await fetch(probeUrl, { redirect: "follow" });
+    await probe.body?.cancel();
+    if (!probe.ok) {
+      return { updated: 0, skipped: 0, failed: 0, total: selectedContacts.length, candidates: realContacts.length, blockedReason: `ClientBook public link is not live (${probe.status}).` };
+    }
+  } catch {
+    return { updated: 0, skipped: 0, failed: 0, total: selectedContacts.length, candidates: realContacts.length, blockedReason: "ClientBook public link could not be reached." };
+  }
+
+  const headers = { Authorization: apiKey, "Content-Type": "application/json" };
+  const fieldsResponse = await fetch(`${BASE_URL}/contact-custom-fields`, { headers });
+  if (!fieldsResponse.ok) {
+    return { updated: 0, skipped: 0, failed: selectedContacts.length, total: selectedContacts.length, candidates: realContacts.length, blockedReason: "Quo custom properties could not be loaded." };
+  }
+  const fieldsJson: any = await fieldsResponse.json();
+  const clientBookField: QuoCustomFieldDefinition | undefined = (fieldsJson.data || []).find(
+    (field: QuoCustomFieldDefinition) => field.name.toLowerCase() === CLIENTBOOK_FIELD_NAME.toLowerCase(),
   );
+  if (!clientBookField) {
+    return { updated: 0, skipped: 0, failed: 0, total: selectedContacts.length, candidates: realContacts.length, blockedReason: "The ClientBook URL property is missing in Quo." };
+  }
 
   let updated = 0;
+  let skipped = 0;
   let failed = 0;
 
-  for (const contact of realContacts) {
+  for (const contact of selectedContacts) {
     try {
-      const phoneDigits = (contact.phone || "").replace(/\D/g, "");
-      const sourceUrl = `https://custcrmapp-nxdjk2u8.manus.space/link?phone=${phoneDigits}`;
+      const readResponse = await fetch(`${BASE_URL}/contacts/${contact.openPhoneId}`, { headers });
+      if (!readResponse.ok) {
+        failed++;
+        continue;
+      }
+      const readJson: any = await readResponse.json();
+      const remoteContact = readJson.data || readJson;
+      const expectedUrl = buildClientBookUrl(contact.phone || "", clientBookBaseUrl);
+      const existingUrl = (remoteContact.customFields || []).find(
+        (field: any) => field.key === clientBookField.key,
+      )?.value;
+      if (expectedUrl && existingUrl === expectedUrl) {
+        skipped++;
+        continue;
+      }
 
-      const body = {
-        sourceUrl,
-        source: "ClientBook",
-      };
+      const body = buildPreservedContactPatch(
+        remoteContact,
+        { phone: contact.phone || "" },
+        clientBookField,
+        clientBookBaseUrl,
+      );
 
       const res = await fetch(`${BASE_URL}/contacts/${contact.openPhoneId}`, {
         method: "PATCH",
-        headers: {
-          Authorization: apiKey,
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(body),
       });
 
@@ -75,20 +139,15 @@ export async function batchPushSourceUrls(): Promise<{ updated: number; failed: 
         failed++;
       }
 
-      // Rate limit: 200ms between requests to stay under OpenPhone limits
+      // Keep this deliberately slow and bounded to respect Quo API limits.
       await new Promise((r) => setTimeout(r, 200));
-
-      // Log progress every 100
-      if ((updated + failed) % 100 === 0) {
-        console.log(`[Batch SourceUrl] Progress: ${updated + failed}/${realContacts.length} (${updated} ok, ${failed} failed)`);
-      }
     } catch {
       failed++;
     }
   }
 
-  console.log(`[Batch SourceUrl] Done: ${updated} updated, ${failed} failed out of ${realContacts.length}`);
-  return { updated, failed, total: realContacts.length };
+  console.log(`[Batch ClientBook Link] Done: ${updated} updated, ${skipped} unchanged, ${failed} failed out of ${selectedContacts.length}`);
+  return { updated, skipped, failed, total: selectedContacts.length, candidates: realContacts.length };
 }
 
 // ── Batch Conversation Extraction ────────────────────────────────────

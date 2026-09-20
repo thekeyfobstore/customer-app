@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useReducer, useCallback } from "react";
-import { Customer, Vehicle, Appointment, Message, ServiceRecord, CloverOrder, FollowUp, DropInLocation, DayRoute, Quote } from "./types";
+import { Customer, Appointment, Message, ServiceRecord, CloverOrder, FollowUp, DropInLocation, DayRoute, Quote } from "./types";
 import {
   loadCustomers, saveCustomers,
   loadAppointments, saveAppointments,
@@ -13,6 +13,7 @@ import {
 } from "./storage";
 import { migrateKeysToSecureStore } from "./secure-storage";
 import { getApiBaseUrl } from "@/constants/oauth";
+import { mapServerContactToCustomer } from "./server-contact";
 
 interface DataState {
   customers: Customer[];
@@ -339,43 +340,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const serverContacts = json?.result?.data?.json || json?.result?.data || [];
         if (!active || serverContacts.length === 0) return;
 
-        // Convert server DB rows to Customer objects
-        const mapped: Customer[] = serverContacts.map((sc: any) => {
-          const vehicles: Vehicle[] = [];
-          if (sc.vehicleYearMakeModel || sc.vin || sc.keyCode || sc.dealerComparison || sc.partNumber) {
-            // Parse "2017 jeep cherokee" into year/make/model
-            const ymm = (sc.vehicleYearMakeModel || "").trim();
-            const parts = ymm.split(/\s+/);
-            const yearMatch = parts[0]?.match(/^(19|20)\d{2}$/);
-            vehicles.push({
-              id: `v-${sc.openPhoneId || sc.id}`,
-              year: yearMatch ? parts[0] : "",
-              make: yearMatch ? (parts[1] || "") : (parts[0] || ""),
-              model: yearMatch ? parts.slice(2).join(" ") : parts.slice(1).join(" "),
-              vin: sc.vin || "",
-              keyCode: sc.keyCode || undefined,
-              dealerComparison: sc.dealerComparison || undefined,
-              partNumber: sc.partNumber || undefined,
-            });
-          }
-          return {
-            id: `op-${sc.openPhoneId || sc.id}`,
-            firstName: sc.firstName || "",
-            lastName: sc.lastName || "",
-            phone: sc.phone || "",
-            email: sc.email || "",
-            company: sc.company || "",
-            notes: "",
-            tags: [],
-            address: sc.address ? { street: sc.address, city: "", state: "", zip: "" } : undefined,
-            vehicles,
-            createdAt: sc.createdAt || new Date().toISOString(),
-            updatedAt: sc.updatedAt || new Date().toISOString(),
-            openPhoneContactId: sc.openPhoneId || undefined,
-            route: sc.route || undefined,
-            lastActivityAt: sc.lastActivityAt || undefined,
-          } as Customer;
-        });
+        const mapped: Customer[] = serverContacts.map(mapServerContactToCustomer);
 
         dispatch({ type: "SYNC_CONTACTS", payload: mapped });
       } catch {

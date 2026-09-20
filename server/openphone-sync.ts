@@ -4,8 +4,9 @@ import { contacts, appSettings, type InsertContact } from "../drizzle/schema";
 import { parseCompanyField } from "./company-parser";
 import { autoExtractOnSync } from "./batch-operations";
 
-const BASE_URL = "https://api.openphone.com/v1";
+const BASE_URL = "https://api.quo.com/v1";
 const SYNC_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+let syncInProgress = false;
 
 /**
  * Known OpenPhone custom field keys for The Key Fob Store.
@@ -55,6 +56,11 @@ function extractCustomFields(rawCustomFields: any[]): Record<string, string> {
     }
   }
   return result;
+}
+
+function bounded(value: string | null | undefined, maxLength: number): string | null {
+  if (!value) return null;
+  return value.slice(0, maxLength);
 }
 
 /**
@@ -153,10 +159,13 @@ async function fetchAllContacts(apiKey: string): Promise<any[]> {
   const allContacts: any[] = [];
   let nextPageToken: string | undefined;
   let pageCount = 0;
-  const MAX_PAGES = 200;
+  // The business workflow only needs the established saved-contact set plus
+  // recent conversation participants. Keep this bounded instead of importing
+  // the entire device-address-book history exposed by Quo.
+  const MAX_PAGES = 40; // 2,000 contacts at 50 per page
 
   do {
-    let url = `${BASE_URL}/contacts?pageSize=100`;
+    let url = `${BASE_URL}/contacts?maxResults=50`;
     if (nextPageToken) {
       url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
     }
@@ -243,16 +252,16 @@ async function syncContacts(): Promise<{ added: number; updated: number; total: 
       openPhoneId: c.id,
       firstName: finalFirstName || null,
       lastName: finalLastName || null,
-      phone: phone || null,
-      email: email || null,
+      phone: bounded(phone, 32),
+      email: bounded(email, 320),
       company: company || null,
       vehicleYearMakeModel: customFields.vehicle || parsedVehicle || null,
-      vin: customFields.vin || parsedVin || null,
-      keyCode: customFields.keyCode || null,
+      vin: bounded(customFields.vin || parsedVin, 64),
+      keyCode: bounded(customFields.keyCode, 128),
       dealerComparison: customFields.dealerComparison || null,
-      partNumber: customFields.partNumber || null,
+      partNumber: bounded(customFields.partNumber, 128),
       address: customFields.address || parsedLocation || null,
-      route: customFields.route || null,
+      route: bounded(customFields.route, 128),
       lastActivityAt,
       rawJson: JSON.stringify(c),
     };
@@ -523,6 +532,12 @@ async function updateActivityFromConversations(): Promise<void> {
  * Run a single sync and record the timestamp.
  */
 async function runSync() {
+  if (syncInProgress) {
+    console.log("[OpenPhone Sync] Previous sync is still running; skipping this cycle");
+    return;
+  }
+
+  syncInProgress = true;
   try {
     const result = await syncContacts();
     // Also sync conversation participants to catch people not saved as contacts
@@ -541,6 +556,8 @@ async function runSync() {
     await autoExtractOnSync();
   } catch (err) {
     console.error("[OpenPhone Sync] Sync failed:", err);
+  } finally {
+    syncInProgress = false;
   }
 }
 

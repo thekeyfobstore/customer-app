@@ -59,7 +59,14 @@ export default function SettingsScreen() {
   // Batch operations
   const batchPushLinksMutation = trpc.contacts.batchPushLinks.useMutation({
     onSuccess: (data) => {
-      Alert.alert("Links Pushed", `Updated ${data.updated} contacts in OpenPhone with ClientBook links. ${data.failed} failed.`);
+      if (data.blockedReason) {
+        Alert.alert("Links Not Updated", data.blockedReason);
+        return;
+      }
+      Alert.alert(
+        "Links Updated",
+        `Updated ${data.updated} recent Quo contacts. ${data.skipped} were already current. ${data.failed} failed.`,
+      );
     },
     onError: () => Alert.alert("Error", "Failed to push links to OpenPhone."),
   });
@@ -387,11 +394,11 @@ export default function SettingsScreen() {
               <Pressable
                 onPress={() => {
                   Alert.alert(
-                    "Push Links to OpenPhone",
-                    "This will add a ClientBook link to every contact in OpenPhone so you can tap to jump to their profile. This may take a few minutes for 2000+ contacts.",
+                    "Update Recent ClientBook Links",
+                    "This safely adds a visible ClientBook link to the 20 most recent synced Quo contacts. Existing phone numbers, email addresses, and custom properties are preserved.",
                     [
                       { text: "Cancel", style: "cancel" },
-                      { text: "Push Links", onPress: () => batchPushLinksMutation.mutate() },
+                      { text: "Update Links", onPress: () => batchPushLinksMutation.mutate({ limit: 20 }) },
                     ]
                   );
                 }}
@@ -400,7 +407,7 @@ export default function SettingsScreen() {
               >
                 <IconSymbol name="paperplane.fill" size={20} color={colors.primary} />
                 <Text style={[styles.sectionRowTitle, { color: colors.foreground, flex: 1 }]}>
-                  {batchPushLinksMutation.isPending ? "Pushing Links..." : "Push ClientBook Links to OpenPhone"}
+                  {batchPushLinksMutation.isPending ? "Updating Links..." : "Update Recent ClientBook Links"}
                 </Text>
                 <IconSymbol name="chevron.right" size={16} color={colors.muted} />
               </Pressable>

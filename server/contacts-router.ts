@@ -24,6 +24,22 @@ export const contactsRouter = router({
   }),
 
   /**
+   * Resolve one synced contact by normalized phone number for OpenPhone deep links.
+   */
+  findByPhone: publicProcedure
+    .input(z.object({ phone: z.string().min(7).max(32) }))
+    .query(async ({ input }) => {
+      const normalized = input.phone.replace(/\D/g, "").slice(-10);
+      if (normalized.length < 7) return null;
+
+      const syncedContacts = await getSyncedContacts();
+      return syncedContacts.find((contact) => {
+        const contactPhone = (contact.phone || "").replace(/\D/g, "").slice(-10);
+        return contactPhone === normalized;
+      }) ?? null;
+    }),
+
+  /**
    * Get the current sync status (configured, last sync time, contact count).
    */
   syncStatus: publicProcedure.query(async () => {
@@ -107,13 +123,14 @@ export const contactsRouter = router({
   }),
 
   /**
-   * Batch push ClientBook deep links (sourceUrl) to ALL OpenPhone contacts.
-   * This makes each contact in OpenPhone show a clickable "ClientBook" link.
+   * Add visible ClientBook URL properties to a bounded set of recent contacts.
    */
-  batchPushLinks: publicProcedure.mutation(async () => {
-    const result = await batchPushSourceUrls();
-    return { success: true, ...result };
-  }),
+  batchPushLinks: publicProcedure
+    .input(z.object({ limit: z.number().min(1).max(50).optional() }).optional())
+    .mutation(async ({ input }) => {
+      const result = await batchPushSourceUrls(input?.limit ?? 20);
+      return { success: !result.blockedReason, ...result };
+    }),
 
   /**
    * Batch extract customer info from conversation history.
